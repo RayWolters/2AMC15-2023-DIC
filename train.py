@@ -18,6 +18,7 @@ try:
     from agents.null_agent import NullAgent
     from agents.greedy_agent import GreedyAgent
     from agents.random_agent import RandomAgent
+    from agents.q_learning_agent import QLearningAgent
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -36,6 +37,7 @@ except ModuleNotFoundError:
     from agents.null_agent import NullAgent
     from agents.greedy_agent import GreedyAgent
     from agents.random_agent import RandomAgent
+    from agents.q_learning_agent import QLearningAgent
 
 
 
@@ -68,23 +70,29 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
         env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
+                          reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
         obs, info = env.get_observation()
 
         # Set up the agents from scratch for every grid
         # Add your agents here
-        agents = [NullAgent(0),
-                  GreedyAgent(0),
-                  RandomAgent(0)]
+        agents = [
+            # NullAgent(0),
+            # GreedyAgent(0),
+            # RandomAgent(0),
+            QLearningAgent(0)
+        ]
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
             for _ in trange(iters):
-                # Agent takes an action based on the latest observation and info
+                state = agent.get_state_from_info(
+                    obs, info)  # Convert observation to state
                 action = agent.take_action(obs, info)
-
-                # The action is performed in the environment
                 obs, reward, terminated, info = env.step([action])
+                next_state = agent.get_state_from_info(
+                    obs, info)  # Convert next observation to next state
+                agent.update_q_values(state, action, reward, next_state)
 
                 # If the agent is terminated, we reset the env.
                 if terminated:

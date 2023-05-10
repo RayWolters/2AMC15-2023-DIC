@@ -395,6 +395,7 @@ class Environment:
 
         # Update the grid with the new agent positions and calculate the reward
         reward = self.reward_fn(self.grid, self.info)
+        # print(reward)
         terminal_state = sum(self.agent_done) == self.n_agents
         if terminal_state:
             self.environment_ready = False
@@ -407,6 +408,15 @@ class Environment:
                             is_single_step)
 
         return self.grid.cells, reward, terminal_state, self.info
+
+    @staticmethod
+    def simple_reward_function(grid: Grid, info: dict) -> float:
+        if not info["agent_moved"][0]:
+            return -10.0
+        elif info["dirt_cleaned"][0] > 0:
+            return 10.0
+        else:
+            return -1.0
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:
@@ -538,7 +548,8 @@ if __name__ == '__main__':
 
     # Load the random agent
     from agents.random_agent import RandomAgent
-    test_agent = RandomAgent(agent_number=0)
+    from agents.q_learning_agent import QLearningAgent
+    test_agent = QLearningAgent(agent_number=0)
 
     # Take 1000 steps with the GUI
     for t in trange(1000):
