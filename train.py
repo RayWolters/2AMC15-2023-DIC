@@ -69,7 +69,10 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
-        env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
+        # env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
+        #                   reward_fn=Environment.simple_reward_function,
+        #                   sigma=sigma, target_fps=fps, random_seed=random_seed)
+        env = Environment(grid, no_gui, n_agents=1, agent_start_pos=[(1, 1)],
                           reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
         obs, info = env.get_observation()
@@ -80,28 +83,39 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             # NullAgent(0),
             # GreedyAgent(0),
             # RandomAgent(0),
-            QLearningAgent(0)
+            QLearningAgent(agent_number=0)
         ]
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
+            agent.charger_pos = env.get_charger_location(obs)
             for _ in trange(iters):
-                state = agent.get_state_from_info(
-                    obs, info)  # Convert observation to state
-                action = agent.take_action(obs, info)
-                obs, reward, terminated, info = env.step([action])
-                next_state = agent.get_state_from_info(
-                    obs, info)  # Convert next observation to next state
-                agent.update_q_values(state, action, reward, next_state)
+                if isinstance(agent, QLearningAgent):
+                    state = agent.get_state_from_info(
+                        obs, info)  # Convert observation to state
+                    action = agent.take_action(obs, info)
+                    obs, reward, terminated, info = env.step([action])
 
+                    next_state = agent.get_state_from_info(
+                        obs, info)  # Convert next observation to next state
+                    if 3 in obs.flatten():
+                        agent.update_q_values(state, action, reward, next_state)
+                else:
+                    # Agent takes an action based on the
+                    # latest observation and info
+                    action = agent.take_action(obs, info)
+                    # The action is performed in the environment
+                    obs, reward, terminated, info = env.step([action])
                 # If the agent is terminated, we reset the env.
                 if terminated:
                     obs, info, world_stats = env.reset()
+                    agent.way_back = None
                 agent.process_reward(obs, reward)
             obs, info, world_stats = env.reset()
             print(world_stats)
 
-            Environment.evaluate_agent(grid, [agent], 1000, out, 0.2)
+            Environment.evaluate_agent(grid, [agent], 1000, out, 0,
+                                       agent_start_pos=[(1, 1)])
 
 
 
