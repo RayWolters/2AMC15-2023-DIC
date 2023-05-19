@@ -422,7 +422,7 @@ class Environment:
         elif info["dirt_cleaned"][0] > 0:
             return 10
         else:
-            return -10
+            return -0.5
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:

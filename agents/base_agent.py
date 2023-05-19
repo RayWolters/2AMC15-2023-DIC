@@ -17,7 +17,7 @@ class BaseAgent(ABC):
         self.agent_number = agent_number
 
     @abstractmethod
-    def process_reward(self, observation: np.ndarray, reward: float):
+    def process_reward(self, observation: np.ndarray, reward: float, info: dict):
         """Any code that processes a reward given the observation is here.
 
         Args:

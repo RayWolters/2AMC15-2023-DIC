@@ -12,7 +12,7 @@ class QLearningAgent(BaseAgent):
             agent_number: The index of the agent in the environment.
             alpha: Learning rate (default: 0.1)
             gamma: Discount factor (default: 0.9)
-            epsilon: Exploration rate (default: 0.1)
+            epsilon: Exploration rate (default: 0)
         """
         super().__init__(agent_number)
         self.alpha = alpha
@@ -21,13 +21,19 @@ class QLearningAgent(BaseAgent):
         self.q_table = {}
         self.charger_pos = None
         self.way_back = None
+        self.already_visited = set()
 
     def process_reward(
             self,
             observation: np.ndarray,
-            reward: float
+            reward: float,
+            info: dict
     ):
-        pass
+        if info['agent_pos'][self.agent_number] in self.already_visited and \
+                info['agent_moved'][self.agent_number]:
+            reward = -2
+
+        return reward
 
     def take_action(
             self,
@@ -35,13 +41,16 @@ class QLearningAgent(BaseAgent):
             info: dict
     ) -> int:
         state = self.get_state_from_info(observation, info)
+        self.already_visited.add(info['agent_pos'][self.agent_number])
 
         if 3 not in observation.flatten():
             if not self.way_back:
-                self.way_back = calulate_path_to_charger(observation, info,
-                                                         self.agent_number,
-                                                         self.charger_pos)
-
+                self.way_back = calulate_path_to_charger(
+                    observation,
+                    info,
+                    self.agent_number,
+                    self.charger_pos
+                )
             action = self.way_back.pop(0)
             return action
 
@@ -54,8 +63,8 @@ class QLearningAgent(BaseAgent):
         return action
 
     def update_q_values(
-            self, state:
-            tuple,
+            self,
+            state: tuple,
             action: int,
             reward: float,
             next_state: tuple
@@ -88,8 +97,8 @@ class QLearningAgent(BaseAgent):
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
         return int(np.argmax(q_values))
 
+    @staticmethod
     def _get_surroundings(
-            self,
             obs: np.ndarray,
             pos: tuple
     ) -> tuple:
