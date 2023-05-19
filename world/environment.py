@@ -410,13 +410,19 @@ class Environment:
         return self.grid.cells, reward, terminal_state, self.info
 
     @staticmethod
+    def get_charger_location(observation) -> tuple:
+        indices = np.where(observation == 4)
+        coordinates = (int(indices[0][0]), int(indices[1][0]))
+        return coordinates
+
+    @staticmethod
     def simple_reward_function(grid: Grid, info: dict) -> float:
         if not info["agent_moved"][0]:
-            return -10.0
+            return -1000.0
         elif info["dirt_cleaned"][0] > 0:
-            return 10.0
+            return 10
         else:
-            return -1.0
+            return -10
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:
@@ -542,7 +548,7 @@ class Environment:
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
-    base_grid_fp = Path("../grid_configs/rooms-1.grd")
+    base_grid_fp = Path("../grid_configs/states_test.grd")
     envi = Environment(base_grid_fp, False, 1, target_fps=5)
     observe, inf = envi.get_observation()
 
