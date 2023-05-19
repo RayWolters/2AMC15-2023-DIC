@@ -1,10 +1,11 @@
 import numpy as np
 from random import randint
 from agents import BaseAgent
+from .pathfinding import calulate_path_to_charger
 
 
 class QLearningAgent(BaseAgent):
-    def __init__(self, agent_number, alpha=0.3, gamma=0.9, epsilon=0.2):
+    def __init__(self, agent_number, alpha=0.1, gamma=0.9, epsilon=0):
         """Q-Learning agent for grid cleaning.
 
         Args:
@@ -18,12 +19,32 @@ class QLearningAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
         self.q_table = {}
+        self.charger_pos = None
+        self.way_back = None
 
-    def process_reward(self, observation: np.ndarray, reward: float):
+    def process_reward(
+            self,
+            observation: np.ndarray,
+            reward: float
+    ):
         pass
 
-    def take_action(self, observation: np.ndarray, info: dict) -> int:
+    def take_action(
+            self,
+            observation: np.ndarray,
+            info: dict
+    ) -> int:
         state = self.get_state_from_info(observation, info)
+
+        if 3 not in observation.flatten():
+            if not self.way_back:
+                self.way_back = calulate_path_to_charger(observation, info,
+                                                         self.agent_number,
+                                                         self.charger_pos)
+
+            action = self.way_back.pop(0)
+            return action
+
         if np.random.uniform() < self.epsilon:
             # Exploration: Select a random action
             action = randint(0, 4)
@@ -32,22 +53,49 @@ class QLearningAgent(BaseAgent):
             action = self._get_best_action(state)
         return action
 
-    def update_q_values(self, state: tuple, action: int, reward: float,
-                        next_state: tuple):
+    def update_q_values(
+            self, state:
+            tuple,
+            action: int,
+            reward: float,
+            next_state: tuple
+    ) -> None:
         q_value = self.q_table.get((state, action), 0.0)
         max_q_value = max(self.q_table.get((next_state, a), 0.0) for a in range(5))
         new_q_value = q_value + self.alpha * (reward + self.gamma * max_q_value - q_value)
         self.q_table[(state, action)] = new_q_value
 
-    def get_state_from_info(self, observation: np.ndarray, info: dict) -> tuple:
-        # Extract the relevant information from the observation and info dictionary
+    def get_state_from_info(
+            self,
+            observation: np.ndarray,
+            info: dict
+    ) -> tuple:
+        # Extract the relevant information from the info dictionary
         agent_pos = info["agent_pos"][self.agent_number]
+
+        surroundings = self._get_surroundings(observation, agent_pos)
+        # surroundings = tuple(observation.flatten())
+
         # Define the state representation by including the agent's position
-        state = (tuple(observation.flatten()), agent_pos)
+        state = (surroundings, agent_pos)
         return state
 
-    def _get_best_action(self, state: tuple) -> int:
+    def _get_best_action(
+            self,
+            state: tuple
+    ) -> int:
         # Get the action with the highest Q-value for the given state
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
-        print(q_values)
         return int(np.argmax(q_values))
+
+    def _get_surroundings(
+            self,
+            obs: np.ndarray,
+            pos: tuple
+    ) -> tuple:
+        i, j = pos
+        surroundings = (obs[i - 1, j],
+                        obs[i, j - 1],
+                        obs[i, j + 1],
+                        obs[i + 1, j])
+        return surroundings
