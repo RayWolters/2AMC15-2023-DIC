@@ -22,6 +22,8 @@ class QLearningAgent(BaseAgent):
         self.charger_pos = None
         self.way_back = None
         self.already_visited = set()
+        self.clean_tiles = set()
+        self.clean_tiles_int = 0
 
     def process_reward(
             self,
@@ -31,7 +33,11 @@ class QLearningAgent(BaseAgent):
     ):
         if info['agent_pos'][self.agent_number] in self.already_visited and \
                 info['agent_moved'][self.agent_number]:
-            reward = -2
+            reward = -5
+
+        if reward > 10:
+            self.clean_tiles.add(info['agent_pos'][self.agent_number])
+            self.clean_tiles_int += 1
 
         return reward
 
@@ -70,8 +76,11 @@ class QLearningAgent(BaseAgent):
             next_state: tuple
     ) -> None:
         q_value = self.q_table.get((state, action), 0.0)
-        max_q_value = max(self.q_table.get((next_state, a), 0.0) for a in range(5))
-        new_q_value = q_value + self.alpha * (reward + self.gamma * max_q_value - q_value)
+        max_q_value = max(self.q_table.get((next_state, a), 0.0)
+                          for a in range(5))
+        new_q_value = q_value + self.alpha * \
+            (reward + self.gamma * max_q_value - q_value)
+
         self.q_table[(state, action)] = new_q_value
 
     def get_state_from_info(
@@ -85,9 +94,18 @@ class QLearningAgent(BaseAgent):
         surroundings = self._get_surroundings(observation, agent_pos)
         # surroundings = tuple(observation.flatten())
 
+        # clean_tiles = tuple(self.clean_tiles)
+        # clean_tiles = self.clean_tiles_int
+
         # Define the state representation by including the agent's position
         state = (surroundings, agent_pos)
         return state
+
+    def reset_parameters(self) -> None:
+        self.way_back = None
+        self.already_visited = set()
+        self.clean_tiles = set()
+        self.clean_tiles_int = 0
 
     def _get_best_action(
             self,
@@ -103,8 +121,19 @@ class QLearningAgent(BaseAgent):
             pos: tuple
     ) -> tuple:
         i, j = pos
-        surroundings = (obs[i - 1, j],
+        surroundings = [obs[i - 1, j],
                         obs[i, j - 1],
                         obs[i, j + 1],
-                        obs[i + 1, j])
-        return surroundings
+                        obs[i + 1, j]]
+
+        # Visibility of 2 tiles, but can not see through walls/obstacles
+        if obs[i - 1, j] != 1 and obs[i - 1, j] != 2:
+            surroundings.append(obs[i - 2, j])
+        if obs[i + 1, j] != 1 and obs[i + 1, j] != 2:
+            surroundings.append(obs[i + 2, j])
+        if obs[i, j - 1] != 1 and obs[i, j - 1] != 2:
+            surroundings.append(obs[i, j - 2])
+        if obs[i, j + 1] != 1 and obs[i, j + 1] != 2:
+            surroundings.append(obs[i, j + 2])
+
+        return tuple(surroundings)
