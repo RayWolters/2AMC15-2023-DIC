@@ -90,16 +90,19 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     action = agent.take_action(obs, info)
 
                     obs, reward, terminated, info = env.step([action])
-                    new_state = agent.get_state_from_info(
-                        obs, info)  # Convert next observation to next state
+                    state = agent.get_state_from_info(
+                        obs, info)  # Convert next observation to state
 
                     reward = agent.process_reward(
                         obs,
                         reward,
                         info,
-                        new_state,
+                        state,
                         action
                     )
+
+                    new_state = agent.get_state_from_info(
+                        obs, info)
 
                     agent.update_q_values(
                         old_state,
