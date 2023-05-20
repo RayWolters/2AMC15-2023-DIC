@@ -420,9 +420,9 @@ class Environment:
         if not info["agent_moved"][0]:
             return -1000.0
         elif info["dirt_cleaned"][0] > 0:
-            return 10
+            return 100
         else:
-            return -0.5
+            return -2
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:
