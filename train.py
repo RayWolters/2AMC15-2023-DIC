@@ -97,17 +97,17 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
                     obs, reward, terminated, info = env.step([action])
                     reward = agent.process_reward(obs, reward, info)
-
+                    print(reward)
                     new_state = agent.get_state_from_info(
                         obs, info)  # Convert next observation to next state
+                    print('state: ', new_state)
 
-                    if 3 in obs.flatten():
-                        agent.update_q_values(
-                            old_state,
-                            action,
-                            reward,
-                            new_state
-                        )
+                    agent.update_q_values(
+                        old_state,
+                        action,
+                        reward,
+                        new_state
+                    )
                 else:
                     # Agent takes an action based on the
                     # latest observation and info
