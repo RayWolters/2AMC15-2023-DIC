@@ -115,7 +115,7 @@ class QLearningAgent(BaseAgent):
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
         return int(np.argmax(q_values))
 
-    @staticmethod
+    # @staticmethod
     # def _get_surroundings(
     #         obs: np.ndarray,
     #         pos: tuple
