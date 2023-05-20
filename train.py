@@ -118,7 +118,11 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 if terminated:
                     obs, info, world_stats = env.reset()
                     agent.reset_parameters()
+
+            # Reset parameters and disable training mode
             agent.reset_parameters()
+            agent.training = False
+
             obs, info, world_stats = env.reset()
             print(world_stats)
             Environment.evaluate_agent(grid, [agent], 1000, out, 0,
