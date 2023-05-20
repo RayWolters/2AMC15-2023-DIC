@@ -116,24 +116,54 @@ class QLearningAgent(BaseAgent):
         return int(np.argmax(q_values))
 
     @staticmethod
+    # def _get_surroundings(
+    #         obs: np.ndarray,
+    #         pos: tuple
+    # ) -> tuple:
+    #     i, j = pos
+    #     surroundings = [obs[i - 1, j],
+    #                     obs[i, j - 1],
+    #                     obs[i, j + 1],
+    #                     obs[i + 1, j]]
+    #
+    #     # Visibility of 2 tiles, but can not see through walls/obstacles
+    #     if obs[i - 1, j] != 1 and obs[i - 1, j] != 2:
+    #         surroundings.append(obs[i - 2, j])
+    #     if obs[i + 1, j] != 1 and obs[i + 1, j] != 2:
+    #         surroundings.append(obs[i + 2, j])
+    #     if obs[i, j - 1] != 1 and obs[i, j - 1] != 2:
+    #         surroundings.append(obs[i, j - 2])
+    #     if obs[i, j + 1] != 1 and obs[i, j + 1] != 2:
+    #         surroundings.append(obs[i, j + 2])
+    #
+    #     return tuple(surroundings)
+
+    @staticmethod
     def _get_surroundings(
             obs: np.ndarray,
-            pos: tuple
+            pos: tuple,
+            visibility_radius: int = 2
     ) -> tuple:
         i, j = pos
-        surroundings = [obs[i - 1, j],
-                        obs[i, j - 1],
-                        obs[i, j + 1],
-                        obs[i + 1, j]]
+        directions = [(0, 1), (0, -1), (1, 0),
+                      (-1, 0)]  # right, left, down, up
+        surroundings = []
 
-        # Visibility of 2 tiles, but can not see through walls/obstacles
-        if obs[i - 1, j] != 1 and obs[i - 1, j] != 2:
-            surroundings.append(obs[i - 2, j])
-        if obs[i + 1, j] != 1 and obs[i + 1, j] != 2:
-            surroundings.append(obs[i + 2, j])
-        if obs[i, j - 1] != 1 and obs[i, j - 1] != 2:
-            surroundings.append(obs[i, j - 2])
-        if obs[i, j + 1] != 1 and obs[i, j + 1] != 2:
-            surroundings.append(obs[i, j + 2])
+        for direction in directions:
+            for r in range(1, visibility_radius + 1):
+                new_i, new_j = i + r * direction[0], j + r * direction[1]
+
+                # Check if the new indices are within the boundaries of the grid
+                if new_i < 0 or new_i >= obs.shape[0] or new_j < 0 or new_j >= \
+                        obs.shape[1]:
+                    break
+
+                # If the cell is a wall, add it and stop looking further in this direction
+                if obs[new_i, new_j] == 1 or obs[new_i, new_j] == 2:
+                    surroundings.append(obs[new_i, new_j])
+                    break
+
+                surroundings.append(obs[new_i, new_j])
 
         return tuple(surroundings)
+
