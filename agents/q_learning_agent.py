@@ -35,7 +35,7 @@ class QLearningAgent(BaseAgent):
                 info['agent_moved'][self.agent_number]:
             reward = -5
 
-        if reward > 10:
+        if reward == 50:
             self.clean_tiles = info['agent_pos'][self.agent_number]
             self.clean_tiles_int += 1
 
@@ -48,17 +48,6 @@ class QLearningAgent(BaseAgent):
     ) -> int:
         state = self.get_state_from_info(observation, info)
         self.already_visited.add(info['agent_pos'][self.agent_number])
-
-        if 3 not in observation.flatten():
-            if not self.way_back:
-                self.way_back = calulate_path_to_charger(
-                    observation,
-                    info,
-                    self.agent_number,
-                    self.charger_pos
-                )
-            action = self.way_back.pop(0)
-            return action
 
         if np.random.uniform() < self.epsilon:
             # Exploration: Select a random action
@@ -91,15 +80,14 @@ class QLearningAgent(BaseAgent):
         # Extract the relevant information from the info dictionary
         agent_pos = info["agent_pos"][self.agent_number]
 
-        # surroundings = self._get_surroundings(observation, agent_pos)
-        # surroundings = tuple(observation.flatten())
+        surroundings = self._get_surroundings(observation, agent_pos)
 
-        clean_tiles = self.clean_tiles
-        # clean_tiles = self.clean_tiles_int
+        # clean_tiles = self.clean_tiles
+        clean_tiles = self.clean_tiles_int
 
         # Define the state representation by including the agent's position
-        state = (clean_tiles, agent_pos)
-        return tuple(state)
+        state = (clean_tiles, surroundings, agent_pos)
+        return state
 
     def reset_parameters(self) -> None:
         self.way_back = None
@@ -142,7 +130,7 @@ class QLearningAgent(BaseAgent):
     def _get_surroundings(
             obs: np.ndarray,
             pos: tuple,
-            visibility_radius: int = 2
+            visibility_radius: int = 1
     ) -> tuple:
         i, j = pos
         directions = [(0, 1), (0, -1), (1, 0),
