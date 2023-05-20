@@ -22,7 +22,7 @@ class QLearningAgent(BaseAgent):
         self.charger_pos = None
         self.way_back = None
         self.already_visited = set()
-        self.clean_tiles = set()
+        self.clean_tiles = tuple()
         self.clean_tiles_int = 0
 
     def process_reward(
@@ -36,7 +36,7 @@ class QLearningAgent(BaseAgent):
             reward = -5
 
         if reward > 10:
-            self.clean_tiles.add(info['agent_pos'][self.agent_number])
+            self.clean_tiles = info['agent_pos'][self.agent_number]
             self.clean_tiles_int += 1
 
         return reward
@@ -91,20 +91,20 @@ class QLearningAgent(BaseAgent):
         # Extract the relevant information from the info dictionary
         agent_pos = info["agent_pos"][self.agent_number]
 
-        surroundings = self._get_surroundings(observation, agent_pos)
+        # surroundings = self._get_surroundings(observation, agent_pos)
         # surroundings = tuple(observation.flatten())
 
-        # clean_tiles = tuple(self.clean_tiles)
+        clean_tiles = self.clean_tiles
         # clean_tiles = self.clean_tiles_int
 
         # Define the state representation by including the agent's position
-        state = (surroundings, agent_pos)
-        return state
+        state = (clean_tiles, agent_pos)
+        return tuple(state)
 
     def reset_parameters(self) -> None:
         self.way_back = None
         self.already_visited = set()
-        self.clean_tiles = set()
+        self.clean_tiles = tuple()
         self.clean_tiles_int = 0
 
     def _get_best_action(
