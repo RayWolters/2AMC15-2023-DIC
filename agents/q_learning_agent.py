@@ -1,11 +1,17 @@
 import numpy as np
 from random import randint
 from agents import BaseAgent
-from .pathfinding import calulate_path_to_charger
 
 
 class QLearningAgent(BaseAgent):
-    def __init__(self, agent_number, alpha=0.1, gamma=0.9, epsilon=0):
+    def __init__(
+            self,
+            agent_number,
+            alpha=0.1,
+            gamma=0.99,
+            epsilon=0.3,
+            training=True
+    ):
         """Q-Learning agent for grid cleaning.
 
         Args:
@@ -13,31 +19,50 @@ class QLearningAgent(BaseAgent):
             alpha: Learning rate (default: 0.1)
             gamma: Discount factor (default: 0.9)
             epsilon: Exploration rate (default: 0)
+            training: Whether agent is in training mode (default: True)
         """
         super().__init__(agent_number)
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
         self.q_table = {}
-        self.charger_pos = None
-        self.way_back = None
+        self.training = training
         self.already_visited = set()
-        self.clean_tiles = tuple()
-        self.clean_tiles_int = 0
+        self.clean_tiles = set()
+        self.last_state = None
+        self.second_last_state = None
 
     def process_reward(
             self,
             observation: np.ndarray,
             reward: float,
-            info: dict
+            info: dict,
+            state: tuple,
+            action: int
     ):
+        if action == 4:
+            reward = -1000
+            return reward
+
+        if not self.second_last_state:
+            self.second_last_state = state
+        elif not self.last_state:
+            self.last_state = state
+        else:
+            if state == self.second_last_state and \
+                    info['agent_moved'][self.agent_number]:
+                reward = -4
+            elif not info['agent_moved'][self.agent_number]:
+                return reward
+            self.second_last_state = self.last_state
+            self.last_state = state
+
         if info['agent_pos'][self.agent_number] in self.already_visited and \
                 info['agent_moved'][self.agent_number]:
-            reward = -5
+            reward = -2
 
-        if reward == 50:
-            self.clean_tiles = info['agent_pos'][self.agent_number]
-            self.clean_tiles_int += 1
+        if reward == 10:
+            self.clean_tiles.add(info['agent_pos'][self.agent_number])
 
         return reward
 
@@ -49,7 +74,7 @@ class QLearningAgent(BaseAgent):
         state = self.get_state_from_info(observation, info)
         self.already_visited.add(info['agent_pos'][self.agent_number])
 
-        if np.random.uniform() < self.epsilon:
+        if np.random.uniform() < self.epsilon and self.training:
             # Exploration: Select a random action
             action = randint(0, 4)
         else:
@@ -81,19 +106,17 @@ class QLearningAgent(BaseAgent):
         agent_pos = info["agent_pos"][self.agent_number]
 
         surroundings = self._get_surroundings(observation, agent_pos)
-
-        # clean_tiles = self.clean_tiles
-        clean_tiles = self.clean_tiles_int
+        amount_of_clean_tiles = len(self.clean_tiles)
 
         # Define the state representation by including the agent's position
-        state = (clean_tiles, surroundings, agent_pos)
+        state = (amount_of_clean_tiles, surroundings, agent_pos)
         return state
 
     def reset_parameters(self) -> None:
-        self.way_back = None
         self.already_visited = set()
-        self.clean_tiles = tuple()
-        self.clean_tiles_int = 0
+        self.clean_tiles = set()
+        self.last_state = None
+        self.second_last_state = None
 
     def _get_best_action(
             self,
@@ -101,7 +124,39 @@ class QLearningAgent(BaseAgent):
     ) -> int:
         # Get the action with the highest Q-value for the given state
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
+        if all(v == 0.0 for v in q_values) and self.training:
+            return randint(0, 4)
         return int(np.argmax(q_values))
+
+    @staticmethod
+    def _get_surroundings(
+            obs: np.ndarray,
+            pos: tuple,
+            visibility_radius: int = 1
+    ) -> tuple:
+        i, j = pos
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        surroundings = []
+
+        for direction in directions:
+            for r in range(1, visibility_radius + 1):
+                new_i, new_j = i + r * direction[0], j + r * direction[1]
+
+                # Check if the new indices are within the boundaries of
+                # the grid
+                if new_i < 0 or new_i >= obs.shape[0] or new_j < 0 or \
+                        new_j >= obs.shape[1]:
+                    break
+
+                # If the cell is a wall, add it and stop looking further in
+                # this direction
+                if obs[new_i, new_j] == 1 or obs[new_i, new_j] == 2:
+                    surroundings.append(obs[new_i, new_j])
+                    break
+
+                surroundings.append(obs[new_i, new_j])
+
+        return tuple(surroundings)
 
     # @staticmethod
     # def _get_surroundings(
@@ -125,33 +180,3 @@ class QLearningAgent(BaseAgent):
     #         surroundings.append(obs[i, j + 2])
     #
     #     return tuple(surroundings)
-
-    @staticmethod
-    def _get_surroundings(
-            obs: np.ndarray,
-            pos: tuple,
-            visibility_radius: int = 1
-    ) -> tuple:
-        i, j = pos
-        directions = [(0, 1), (0, -1), (1, 0),
-                      (-1, 0)]  # right, left, down, up
-        surroundings = []
-
-        for direction in directions:
-            for r in range(1, visibility_radius + 1):
-                new_i, new_j = i + r * direction[0], j + r * direction[1]
-
-                # Check if the new indices are within the boundaries of the grid
-                if new_i < 0 or new_i >= obs.shape[0] or new_j < 0 or new_j >= \
-                        obs.shape[1]:
-                    break
-
-                # If the cell is a wall, add it and stop looking further in this direction
-                if obs[new_i, new_j] == 1 or obs[new_i, new_j] == 2:
-                    surroundings.append(obs[new_i, new_j])
-                    break
-
-                surroundings.append(obs[new_i, new_j])
-
-        return tuple(surroundings)
-
