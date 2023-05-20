@@ -106,8 +106,8 @@ class Environment:
 
         # Set up reward function
         if reward_fn is None:
-            warn("No reward function provided. Using default reward.")
-            self.reward_fn = self._default_reward_function
+            warn("Simple reward function is used.")
+            self.reward_fn = self.simple_reward_function
         else:
             self.reward_fn = reward_fn
         self.info = self._reset_info()
@@ -513,7 +513,13 @@ class Environment:
             actions = [agent.take_action(obs, info)
                        for agent in agents]
             # Take a step in the environment
-            obs, _, terminated, info = env.step(actions)
+            obs, reward, terminated, info = env.step(actions)
+
+            # Process reward has to be called for the agent to know what is
+            # going on, q_values are not updated!
+            states = [agent.get_state_from_info(obs, info) for agent in agents]
+            for action, state, agent in zip(actions, states, agents):
+                agent.process_reward(obs, reward, info, state, action)
 
             # Save the new agent locations
             for i, pos in enumerate(info["agent_pos"]):
