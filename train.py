@@ -91,18 +91,23 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent.charger_pos = env.get_charger_location(obs)
             for _ in trange(iters):
                 if isinstance(agent, QLearningAgent):
-                    state = agent.get_state_from_info(
+                    old_state = agent.get_state_from_info(
                         obs, info)  # Convert observation to state
                     action = agent.take_action(obs, info)
 
                     obs, reward, terminated, info = env.step([action])
-
-                    next_state = agent.get_state_from_info(
-                        obs, info)  # Convert next observation to next state
                     reward = agent.process_reward(obs, reward, info)
 
+                    new_state = agent.get_state_from_info(
+                        obs, info)  # Convert next observation to next state
+
                     if 3 in obs.flatten():
-                        agent.update_q_values(state, action, reward, next_state)
+                        agent.update_q_values(
+                            old_state,
+                            action,
+                            reward,
+                            new_state
+                        )
                 else:
                     # Agent takes an action based on the
                     # latest observation and info
@@ -113,10 +118,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 # If the agent is terminated, we reset the env.
                 if terminated:
                     obs, info, world_stats = env.reset()
-                    agent.way_back = None
-                    agent.already_visited = set()
-            agent.way_back = None
-            agent.already_visited = set()
+                    agent.reset_parameters()
+            agent.reset_parameters()
             obs, info, world_stats = env.reset()
             print(world_stats)
 
