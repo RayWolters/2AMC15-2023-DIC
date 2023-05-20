@@ -79,16 +79,10 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Set up the agents from scratch for every grid
         # Add your agents here
-        agents = [
-            # NullAgent(0),
-            # GreedyAgent(0),
-            # RandomAgent(0),
-            QLearningAgent(agent_number=0)
-        ]
+        agents = [QLearningAgent(agent_number=0)]
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
-            agent.charger_pos = env.get_charger_location(obs)
             for _ in trange(iters):
                 if isinstance(agent, QLearningAgent):
                     old_state = agent.get_state_from_info(
@@ -96,11 +90,16 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     action = agent.take_action(obs, info)
 
                     obs, reward, terminated, info = env.step([action])
-                    reward = agent.process_reward(obs, reward, info)
-                    print(reward)
                     new_state = agent.get_state_from_info(
                         obs, info)  # Convert next observation to next state
-                    print('state: ', new_state)
+
+                    reward = agent.process_reward(
+                        obs,
+                        reward,
+                        info,
+                        new_state,
+                        action
+                    )
 
                     agent.update_q_values(
                         old_state,
@@ -122,7 +121,6 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent.reset_parameters()
             obs, info, world_stats = env.reset()
             print(world_stats)
-
             Environment.evaluate_agent(grid, [agent], 1000, out, 0,
                                        agent_start_pos=[(1, 1)])
 
