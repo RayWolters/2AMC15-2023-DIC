@@ -8,7 +8,7 @@ class QLearningAgent(BaseAgent):
             self,
             agent_number,
             alpha=0.1,
-            gamma=0.99,
+            gamma=0.9,
             epsilon=0.3,
             training=True
     ):
@@ -28,7 +28,7 @@ class QLearningAgent(BaseAgent):
         self.q_table = {}
         self.training = training
         self.already_visited = set()
-        self.clean_tiles = set()
+        self.cleaned_tiles = set()
         self.last_state = None
         self.second_last_state = None
 
@@ -62,7 +62,7 @@ class QLearningAgent(BaseAgent):
             reward = -2
 
         if reward == 10:
-            self.clean_tiles.add(info['agent_pos'][self.agent_number])
+            self.cleaned_tiles.add(info['agent_pos'][self.agent_number])
 
         return reward
 
@@ -106,15 +106,18 @@ class QLearningAgent(BaseAgent):
         agent_pos = info["agent_pos"][self.agent_number]
 
         surroundings = self._get_surroundings(observation, agent_pos)
-        amount_of_clean_tiles = len(self.clean_tiles)
+        number_of_cleaned_tiles = len(self.cleaned_tiles)
+        cleaned_tiles = tuple(self.cleaned_tiles)
 
-        # Define the state representation by including the agent's position
-        state = (amount_of_clean_tiles, surroundings, agent_pos)
+        # Define the state representation by including the agent's position, 
+        # surroundings and (amount of tiles cleaned or locations of cleaned
+        # tiles)
+        state = (cleaned_tiles, surroundings, agent_pos)
         return state
 
     def reset_parameters(self) -> None:
         self.already_visited = set()
-        self.clean_tiles = set()
+        self.cleaned_tiles = set()
         self.last_state = None
         self.second_last_state = None
 

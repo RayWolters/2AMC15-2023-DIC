@@ -72,7 +72,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         # env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
         #                   reward_fn=Environment.simple_reward_function,
         #                   sigma=sigma, target_fps=fps, random_seed=random_seed)
-        env = Environment(grid, no_gui, n_agents=1, agent_start_pos=[(1, 1)],
+        env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
                           reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
         obs, info = env.get_observation()
@@ -129,7 +129,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             obs, info, world_stats = env.reset()
             print(world_stats)
             Environment.evaluate_agent(grid, [agent], 1000, out, 0,
-                                       agent_start_pos=[(1, 1)])
+                                       agent_start_pos=None)
 
 
 
