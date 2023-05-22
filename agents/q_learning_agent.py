@@ -76,6 +76,13 @@ class QLearningAgent(BaseAgent):
             observation: np.ndarray,
             info: dict
     ) -> int:
+        """
+            Return the action based on value in q table or randomly if
+            epsilon
+            Args:
+                observation: Observation to compute action on
+                info: Current info to compute action on
+        """
         state = self.get_state_from_info(observation, info)
         self.already_visited.add(state)
 
@@ -94,6 +101,14 @@ class QLearningAgent(BaseAgent):
             reward: float,
             next_state: tuple
     ) -> None:
+        """
+            Update q values in q table for given parameters
+            Args:
+                state: Old state used to compute new q values
+                action: Action that is done to compute q values
+                reward: Reward corresponding to action in old state
+                next_state: New state after performing action in old state
+        """
         q_value = self.q_table.get((state, action), 0.0)
         max_q_value = max(self.q_table.get((next_state, a), 0.0)
                           for a in range(5))
@@ -107,11 +122,18 @@ class QLearningAgent(BaseAgent):
             observation: np.ndarray,
             info: dict
     ) -> tuple:
+        """
+            Get state from given observation and info
+            Args:
+                observation: Observation to compute state from
+                info: Info to compute position from
+        """
+
         # Initialize grid state if it is None
         if self.grid_state is None:
             self.grid_state = self.get_dirtless_grid(observation)
 
-        # Extract the relevant information from the info dictionary
+        # Extract agent position from info
         agent_pos = info['agent_pos'][self.agent_number]
 
         surroundings = self._get_surroundings(observation, agent_pos, 1)
@@ -132,7 +154,7 @@ class QLearningAgent(BaseAgent):
 
     def reset_parameters(self) -> None:
         """
-        Reset agent parameters for when grid is completed
+            Reset agent parameters for when grid is completed
         """
         self.already_visited = set()
         self.cleaned_tiles = set()
@@ -145,10 +167,16 @@ class QLearningAgent(BaseAgent):
             state: tuple
     ) -> int:
         """
-        Get best action from Q table
+            Get best action from Q table
+            Args:
+                state: State to get best action for
         """
         # Get the action with the highest Q-value for the given state
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
+
+        # If all values for a given state are 0, argmax always takes first
+        # index, which equals a move down, so we want to randomly choose the
+        # move if everything is 0.
         if all(v == 0.0 for v in q_values) and self.training:
             return randint(0, 4)
         return int(np.argmax(q_values))
@@ -159,6 +187,13 @@ class QLearningAgent(BaseAgent):
             pos: tuple,
             visibility_radius: int = 1
     ) -> tuple:
+        """
+            Get surroundings for given position
+            Args:
+                obs: Grid to get surroundings from
+                pos: Position to get surroundings at
+                visibility_radius: Radius of how far agent can see (default=1)
+        """
         i, j = pos
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         surroundings = []
@@ -183,31 +218,16 @@ class QLearningAgent(BaseAgent):
 
         return tuple(surroundings)
 
-    def get_dirtless_grid(self, observation):
+    def get_dirtless_grid(
+            self,
+            observation
+    ) -> np.array:
+        """
+            Get dirtless grid from given observation
+            Args:
+                observation: Grid to compute dirtless grid from
+        """
         grid = observation.copy()
         dirt_mask = (grid == 3)
         grid[dirt_mask] = 0
         return grid
-
-    # @staticmethod
-    # def _get_surroundings(
-    #         obs: np.ndarray,
-    #         pos: tuple
-    # ) -> tuple:
-    #     i, j = pos
-    #     surroundings = [obs[i - 1, j],
-    #                     obs[i, j - 1],
-    #                     obs[i, j + 1],
-    #                     obs[i + 1, j]]
-    #
-    #     # Visibility of 2 tiles, but can not see through walls/obstacles
-    #     if obs[i - 1, j] != 1 and obs[i - 1, j] != 2:
-    #         surroundings.append(obs[i - 2, j])
-    #     if obs[i + 1, j] != 1 and obs[i + 1, j] != 2:
-    #         surroundings.append(obs[i + 2, j])
-    #     if obs[i, j - 1] != 1 and obs[i, j - 1] != 2:
-    #         surroundings.append(obs[i, j - 2])
-    #     if obs[i, j + 1] != 1 and obs[i, j + 1] != 2:
-    #         surroundings.append(obs[i, j + 2])
-    #
-    #     return tuple(surroundings)
