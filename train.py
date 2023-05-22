@@ -9,6 +9,7 @@ change this to however you want it to work.
 from argparse import ArgumentParser
 from pathlib import Path
 
+import time
 from tqdm import trange
 
 try:
@@ -69,9 +70,6 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
-        # env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
-        #                   reward_fn=Environment.simple_reward_function,
-        #                   sigma=sigma, target_fps=fps, random_seed=random_seed)
         env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
                           reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
@@ -83,6 +81,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
+            start_time = time.time()
             for _ in trange(iters):
                 if isinstance(agent, QLearningAgent):
                     old_state = agent.get_state_from_info(
@@ -122,14 +121,16 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     obs, info, world_stats = env.reset()
                     agent.reset_parameters()
 
+            training_time = time.time() - start_time
+
             # Reset parameters and disable training mode
             agent.reset_parameters()
             agent.training = False
 
             obs, info, world_stats = env.reset()
             print(world_stats)
-            Environment.evaluate_agent(grid, [agent], 1000, out, 0,
-                                       agent_start_pos=None)
+            Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
+                                       0, agent_start_pos=None)
 
 
 

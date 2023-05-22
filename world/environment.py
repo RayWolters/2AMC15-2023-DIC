@@ -453,6 +453,7 @@ class Environment:
                        agents: list[BaseAgent],
                        max_steps: int,
                        out_dir: Path,
+                       training_time: float,
                        sigma: float = 0.,
                        agent_start_pos: list[tuple[int, int]] = None,
                        random_seed: int | float | str | bytes | bytearray = 0,
@@ -477,6 +478,7 @@ class Environment:
             agents: A list of trained agents to evaluate.
             max_steps: Max number of steps to take for each agent.
             out_dir: Where to save the results.
+            training_time: The total time spent training.
             sigma: The stochasticity of the environment. The probability that
                 an agent makes the move that it has provided as an action is
                 calculated as 1-sigma.
@@ -541,6 +543,8 @@ class Environment:
         file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
         out_fp = out_dir / f"{file_name}.txt"
         with open(out_fp, "w") as f:
+            f.write(f"Total training time: {training_time}")
+            print(f"Total training time: {training_time}")
             for key, value in world_stats.items():
                 f.write(f"{key}: {value}\n")
                 print(f"{key}: {value}")
