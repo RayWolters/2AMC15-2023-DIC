@@ -13,17 +13,17 @@ class QLearningAgent(BaseAgent):
             training=True,
             use_grid_state=True
     ):
-        """Q-Learning agent for grid cleaning.
-
-        Args:
-            agent_number: The index of the agent in the environment.
-            alpha: Learning rate (default: 0.1)
-            gamma: Discount factor (default: 0.9)
-            epsilon: Exploration rate (default: 0)
-            training: Whether agent is in training mode (default: True)
-            use_grid_state: Whether to use grid as state space (True) or
-            use to use agent's surroundings and cleaned tiles as
-            state space (False) (default: True)
+        """
+            Q-Learning agent for grid cleaning.
+            Args:
+                agent_number: The index of the agent in the environment.
+                alpha: Learning rate (default: 0.1).
+                gamma: Discount factor (default: 0.9).
+                epsilon: Exploration rate (default: 0).
+                training: Whether agent is in training mode (default: True)
+                use_grid_state: Whether to use grid as state space (True) or
+                use to use agent's surroundings and cleaned tiles as
+                state space (False) (default: True).
         """
         super().__init__(agent_number)
         self.alpha = alpha
@@ -46,6 +46,15 @@ class QLearningAgent(BaseAgent):
             state: tuple,
             action: int
     ):
+        """
+            Process reward based on given reward
+            Args:
+                observation: Observation corresponding to reward.
+                reward: Reward gained.
+                info: Info corresponding to reward.
+                state: State corresponding to reward.
+                action: Action that reward was earned on.
+        """
         agent_pos = info['agent_pos'][self.agent_number]
 
         # If not making a move, give bad reward
@@ -92,8 +101,8 @@ class QLearningAgent(BaseAgent):
             Return the action based on value in q table or randomly if
             epsilon
             Args:
-                observation: Observation to compute action on
-                info: Current info to compute action on
+                observation: Observation to compute action on.
+                info: Current info to compute action on.
         """
         state = self.get_state_from_info(observation, info)
         self.already_visited.add(state)
@@ -114,12 +123,12 @@ class QLearningAgent(BaseAgent):
             next_state: tuple
     ) -> None:
         """
-            Update q values in q table for given parameters
+            Update q values in q table for given parameters.
             Args:
-                state: Old state used to compute new q values
-                action: Action that is done to compute q values
-                reward: Reward corresponding to action in old state
-                next_state: New state after performing action in old state
+                state: Old state used to compute new q values.
+                action: Action that is done to compute q values.
+                reward: Reward corresponding to action in old state.
+                next_state: New state after performing action in old state.
         """
         q_value = self.q_table.get((state, action), 0.0)
         max_q_value = max(self.q_table.get((next_state, a), 0.0)
@@ -135,10 +144,10 @@ class QLearningAgent(BaseAgent):
             info: dict
     ) -> tuple:
         """
-            Get state from given observation and info
+            Get state from given observation and info.
             Args:
-                observation: Observation to compute state from
-                info: Info to compute position from
+                observation: Observation to compute state from.
+                info: Info to compute position from.
         """
         # Extract agent position from info
         agent_pos = info['agent_pos'][self.agent_number]
@@ -168,7 +177,7 @@ class QLearningAgent(BaseAgent):
 
     def reset_parameters(self) -> None:
         """
-            Reset agent parameters for when grid is completed
+            Reset agent parameters for when grid is completed.
         """
         self.already_visited = set()
         self.cleaned_tiles = set()
@@ -181,9 +190,9 @@ class QLearningAgent(BaseAgent):
             state: tuple
     ) -> int:
         """
-            Get best action from Q table
+            Get best action from Q table.
             Args:
-                state: State to get best action for
+                state: State to get best action for.
         """
         # Get the action with the highest Q-value for the given state
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
@@ -202,11 +211,12 @@ class QLearningAgent(BaseAgent):
             visibility_radius: int = 1
     ) -> tuple:
         """
-            Get surroundings for given position
+            Get surroundings for given position.
             Args:
-                obs: Grid to get surroundings from
-                pos: Position to get surroundings at
-                visibility_radius: Radius of how far agent can see (default: 1)
+                obs: Grid to get surroundings from.
+                pos: Position to get surroundings at.
+                visibility_radius: Radius of how far agent
+                can see (default: 1).
         """
         i, j = pos
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
@@ -237,9 +247,9 @@ class QLearningAgent(BaseAgent):
             observation
     ) -> np.array:
         """
-            Get dirtless grid from given observation
+            Get dirtless grid from given observation.
             Args:
-                observation: Grid to compute dirtless grid from
+                observation: Grid to compute dirtless grid from.
         """
         grid = observation.copy()
         dirt_mask = (grid == 3)
