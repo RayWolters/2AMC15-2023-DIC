@@ -29,6 +29,7 @@ class QLearningAgent(BaseAgent):
         self.training = training
         self.already_visited = set()
         self.cleaned_tiles = set()
+        self.grid_state = None
         self.last_state = None
         self.second_last_state = None
 
@@ -106,29 +107,46 @@ class QLearningAgent(BaseAgent):
             observation: np.ndarray,
             info: dict
     ) -> tuple:
+        # Initialize grid state if it is None
+        if self.grid_state is None:
+            self.grid_state = self.get_dirtless_grid(observation)
+
         # Extract the relevant information from the info dictionary
         agent_pos = info['agent_pos'][self.agent_number]
 
-        surroundings = self._get_surroundings(observation, agent_pos)
+        surroundings = self._get_surroundings(observation, agent_pos, 1)
         number_of_cleaned_tiles = len(self.cleaned_tiles)
         cleaned_tiles = tuple(self.cleaned_tiles)
 
-        # Define the state representation by including the agent's position, 
+        # Flatten the grid state such that it can be used as a key in q table.
+        # this is however slower than using surroundings and clean tiles.
+        # grid_state = tuple(self.grid_state.flatten())
+
+        # Define the state representation by including the agent's position,
         # surroundings and (amount of tiles cleaned or locations of cleaned
-        # tiles)
+        # tiles) or 3D grid state
         state = (cleaned_tiles, surroundings, agent_pos)
+        # state = (grid_state, agent_pos)
+
         return state
 
     def reset_parameters(self) -> None:
+        """
+        Reset agent parameters for when grid is completed
+        """
         self.already_visited = set()
         self.cleaned_tiles = set()
         self.last_state = None
         self.second_last_state = None
+        self.grid_state = None
 
     def _get_best_action(
             self,
             state: tuple
     ) -> int:
+        """
+        Get best action from Q table
+        """
         # Get the action with the highest Q-value for the given state
         q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
         if all(v == 0.0 for v in q_values) and self.training:
@@ -164,6 +182,12 @@ class QLearningAgent(BaseAgent):
                 surroundings.append(obs[new_i, new_j])
 
         return tuple(surroundings)
+
+    def get_dirtless_grid(self, observation):
+        grid = observation.copy()
+        dirt_mask = (grid == 3)
+        grid[dirt_mask] = 0
+        return grid
 
     # @staticmethod
     # def _get_surroundings(
