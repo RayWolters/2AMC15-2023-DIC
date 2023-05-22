@@ -40,6 +40,7 @@ class QLearningAgent(BaseAgent):
             state: tuple,
             action: int
     ):
+        agent_pos = info['agent_pos'][self.agent_number]
         if action == 4:
             reward = -1000
             return reward
@@ -52,17 +53,20 @@ class QLearningAgent(BaseAgent):
             if state == self.second_last_state and \
                     info['agent_moved'][self.agent_number]:
                 reward = -4
+                return reward
             elif not info['agent_moved'][self.agent_number]:
                 return reward
             self.second_last_state = self.last_state
             self.last_state = state
 
-        if info['agent_pos'][self.agent_number] in self.already_visited and \
+        if state in self.already_visited and \
                 info['agent_moved'][self.agent_number]:
             reward = -2
+            return reward
 
         if reward == 10:
-            self.cleaned_tiles.add(info['agent_pos'][self.agent_number])
+            self.cleaned_tiles.add(agent_pos)
+            self.grid_state[agent_pos[0]][agent_pos[1]] = 3
 
         return reward
 
@@ -72,7 +76,7 @@ class QLearningAgent(BaseAgent):
             info: dict
     ) -> int:
         state = self.get_state_from_info(observation, info)
-        self.already_visited.add(info['agent_pos'][self.agent_number])
+        self.already_visited.add(state)
 
         if np.random.uniform() < self.epsilon and self.training:
             # Exploration: Select a random action
@@ -103,7 +107,7 @@ class QLearningAgent(BaseAgent):
             info: dict
     ) -> tuple:
         # Extract the relevant information from the info dictionary
-        agent_pos = info["agent_pos"][self.agent_number]
+        agent_pos = info['agent_pos'][self.agent_number]
 
         surroundings = self._get_surroundings(observation, agent_pos)
         number_of_cleaned_tiles = len(self.cleaned_tiles)
