@@ -409,12 +409,6 @@ class Environment:
 
         return self.grid.cells, reward, terminal_state, self.info
 
-    def get_dirtless_grid(self):
-        grid = self.grid.cells.copy()
-        dirt_mask = (grid == 3)
-        grid[dirt_mask] = 0
-        return grid
-
     @staticmethod
     def get_charger_location(observation) -> tuple:
         indices = np.where(observation == 4)
