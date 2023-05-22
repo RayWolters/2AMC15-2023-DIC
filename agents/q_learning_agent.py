@@ -10,7 +10,8 @@ class QLearningAgent(BaseAgent):
             alpha=0.1,
             gamma=0.9,
             epsilon=0.3,
-            training=True
+            training=True,
+            use_grid_state=True
     ):
         """Q-Learning agent for grid cleaning.
 
@@ -20,6 +21,9 @@ class QLearningAgent(BaseAgent):
             gamma: Discount factor (default: 0.9)
             epsilon: Exploration rate (default: 0)
             training: Whether agent is in training mode (default: True)
+            use_grid_state: Whether to use grid as state space (True) or
+            use to use agent's surroundings and cleaned tiles as
+            state space (False) (default: True)
         """
         super().__init__(agent_number)
         self.alpha = alpha
@@ -32,6 +36,7 @@ class QLearningAgent(BaseAgent):
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
+        self.use_grid_state = use_grid_state
 
     def process_reward(
             self,
@@ -73,7 +78,8 @@ class QLearningAgent(BaseAgent):
         # cleaned tiles
         if reward == 10:
             self.cleaned_tiles.add(agent_pos)
-            self.grid_state[agent_pos[0]][agent_pos[1]] = 3
+            if self.use_grid_state:
+                self.grid_state[agent_pos[0]][agent_pos[1]] = 3
 
         return reward
 
@@ -134,26 +140,29 @@ class QLearningAgent(BaseAgent):
                 observation: Observation to compute state from
                 info: Info to compute position from
         """
-        # Initialize grid state if it is None
-        if self.grid_state is None:
-            self.grid_state = self.get_dirtless_grid(observation)
-
         # Extract agent position from info
         agent_pos = info['agent_pos'][self.agent_number]
 
-        surroundings = self._get_surroundings(observation, agent_pos, 1)
-        number_of_cleaned_tiles = len(self.cleaned_tiles)
-        cleaned_tiles = tuple(self.cleaned_tiles)
+        if self.use_grid_state:
+            # Initialize grid state if it is None
+            if self.grid_state is None:
+                self.grid_state = self.get_dirtless_grid(observation)
 
-        # Flatten the grid state such that it can be used as a key in q table.
-        # this is however slower than using surroundings and clean tiles.
-        # grid_state = tuple(self.grid_state.flatten())
+            # Flatten the grid state such that it can be used as a key in
+            # q table, this is however slower than using surroundings and
+            # clean tiles.
+            grid_state = tuple(self.grid_state.flatten())
 
-        # Define the state representation by including the agent's position,
-        # surroundings and (amount of tiles cleaned or locations of cleaned
-        # tiles) or 3D grid state
-        state = (cleaned_tiles, surroundings, agent_pos)
-        # state = (grid_state, agent_pos)
+            state = (grid_state, agent_pos)
+        else:
+            surroundings = self._get_surroundings(observation, agent_pos, 1)
+            cleaned_tiles = tuple(self.cleaned_tiles)
+            # number_of_cleaned_tiles = len(self.cleaned_tiles)
+
+            # Define the state representation by including the agent's
+            # position, surroundings and (amount of tiles cleaned or locations
+            # of cleaned tiles)
+            state = (cleaned_tiles, surroundings, agent_pos)
 
         return state
 
@@ -197,7 +206,7 @@ class QLearningAgent(BaseAgent):
             Args:
                 obs: Grid to get surroundings from
                 pos: Position to get surroundings at
-                visibility_radius: Radius of how far agent can see (default=1)
+                visibility_radius: Radius of how far agent can see (default: 1)
         """
         i, j = pos
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
