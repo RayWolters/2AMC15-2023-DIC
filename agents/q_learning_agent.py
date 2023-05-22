@@ -42,10 +42,13 @@ class QLearningAgent(BaseAgent):
             action: int
     ):
         agent_pos = info['agent_pos'][self.agent_number]
+
+        # If not making a move, give bad reward
         if action == 4:
             reward = -1000
             return reward
 
+        # If returning to previous state, give bad reward
         if not self.second_last_state:
             self.second_last_state = state
         elif not self.last_state:
@@ -60,11 +63,14 @@ class QLearningAgent(BaseAgent):
             self.second_last_state = self.last_state
             self.last_state = state
 
+        # If moving to state that agent has already been in, give bad reward
         if state in self.already_visited and \
                 info['agent_moved'][self.agent_number]:
             reward = -2
             return reward
 
+        # If dirt cleaned with move, update grid_state and add tile to
+        # cleaned tiles
         if reward == 10:
             self.cleaned_tiles.add(agent_pos)
             self.grid_state[agent_pos[0]][agent_pos[1]] = 3
@@ -128,7 +134,6 @@ class QLearningAgent(BaseAgent):
                 observation: Observation to compute state from
                 info: Info to compute position from
         """
-
         # Initialize grid state if it is None
         if self.grid_state is None:
             self.grid_state = self.get_dirtless_grid(observation)
