@@ -561,11 +561,12 @@ class Environment:
 
     @staticmethod
     def evaluate_plot(grid_fp: Path,
-                       agents: list[BaseAgent],
-                       max_steps: int,
-                       out_dir: Path,
-                       sigma: float = 0.,
-                       random_seed: int | float | str | bytes | bytearray = 0):
+                      agents: list[BaseAgent],
+                      max_steps: int,
+                      out_dir: Path,
+                      sigma: float = 0.,
+                      agent_start_pos: list[tuple[int, int]] = None,
+                      random_seed: int | float | str | bytes | bytearray = 0):
         """Evaluates a single trained agent's performance.
 
         What this does is it creates a completely new environment from the
@@ -606,7 +607,7 @@ class Environment:
                           no_gui=True,
                           n_agents=len(agents),
                           sigma=sigma,
-                          agent_start_pos=[(1, 1)],
+                          agent_start_pos=agent_start_pos,
                           target_fps=-1,
                           random_seed=random_seed)
         obs, info = env.get_observation()
