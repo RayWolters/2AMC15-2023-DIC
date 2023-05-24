@@ -7,6 +7,8 @@ In this example training script, we use command line arguments. Feel free to
 change this to however you want it to work.
 """
 from argparse import ArgumentParser
+import numpy as np
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 import time
@@ -40,7 +42,14 @@ except ModuleNotFoundError:
     from agents.random_agent import RandomAgent
     from agents.q_learning_agent import QLearningAgent
 
-
+def plot(y):
+    x = np.arange(len(y))
+    plt.plot(x, y)
+    # Adding labels and title
+    plt.xlabel('The times of reset the envrionment')
+    plt.ylabel('The iters used in before reset ')
+    # Displaying the chart
+    plt.show()
 
 def parse_args():
     p = ArgumentParser(description="DIC Reinforcement Learning Trainer.")
@@ -81,45 +90,44 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
+            k = 0
+            steps = []
             start_time = time.time()
             for _ in trange(iters):
-                if isinstance(agent, QLearningAgent):
-                    old_state = agent.get_state_from_info(
-                        obs, info)  # Convert observation to state
-                    action = agent.take_action(obs, info)
+                old_state = agent.get_state_from_info(
+                    obs, info)  # Convert observation to state
+                action = agent.take_action(obs, info)
 
-                    obs, reward, terminated, info = env.step([action])
-                    state = agent.get_state_from_info(
-                        obs, info)  # Convert next observation to state
+                obs, reward, terminated, info, actual_action = env.step([action])
+                state = agent.get_state_from_info(
+                    obs, info)  # Convert next observation to state
 
-                    reward = agent.process_reward(
-                        obs,
-                        reward,
-                        info,
-                        state,
-                        action
-                    )
+                reward = agent.process_reward(
+                    obs,
+                    reward,
+                    info,
+                    state,
+                    actual_action
+                )
 
-                    new_state = agent.get_state_from_info(
-                        obs, info)
+                new_state = agent.get_state_from_info(
+                    obs, info)
 
-                    agent.update_q_values(
-                        old_state,
-                        action,
-                        reward,
-                        new_state
-                    )
-                else:
-                    # Agent takes an action based on the
-                    # latest observation and info
-                    action = agent.take_action(obs, info)
-                    # The action is performed in the environment
-                    obs, reward, terminated, info = env.step([action])
+                agent.update_q_values(
+                    old_state,
+                    actual_action,
+                    reward,
+                    new_state
+                )
+                k += 1
 
+                k += 1
                 # If the agent is terminated, we reset the env.
                 if terminated:
                     obs, info, world_stats = env.reset()
                     agent.reset_parameters()
+                    steps.append(k)
+                    k = 0
 
             training_time = time.time() - start_time
 
@@ -130,7 +138,10 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             obs, info, world_stats = env.reset()
             print(world_stats)
             Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
-                                       0, agent_start_pos=None)
+                                       sigma, agent_start_pos=None)
+            # Environment.evaluate_plot(grid, [agent], 1000, out,
+            #                           sigma, agent_start_pos=None)
+            # plot(y=steps)
 
 
 
