@@ -6,6 +6,7 @@ import datetime
 import random
 from copy import deepcopy
 from datetime import datetime
+import matplotlib.pyplot as plt
 from pathlib import Path
 from time import time, sleep
 from warnings import warn
@@ -407,7 +408,8 @@ class Environment:
             self.gui.render(self.grid.cells, self.agent_pos, self.info,
                             is_single_step)
 
-        return self.grid.cells, reward, terminal_state, self.info
+        return self.grid.cells, reward, terminal_state, self.info, \
+               actual_action
 
     @staticmethod
     def get_charger_location(observation) -> tuple:
@@ -515,7 +517,7 @@ class Environment:
             actions = [agent.take_action(obs, info)
                        for agent in agents]
             # Take a step in the environment
-            obs, reward, terminated, info = env.step(actions)
+            obs, reward, terminated, info, _ = env.step(actions)
 
             # Process reward has to be called for the agent to know what is
             # going on, q_values are not updated!
@@ -557,6 +559,97 @@ class Environment:
             if show_images:
                 img.show(f"Agent {i} Path Frequency")
 
+    @staticmethod
+    def evaluate_plot(grid_fp: Path,
+                       agents: list[BaseAgent],
+                       max_steps: int,
+                       out_dir: Path,
+                       sigma: float = 0.,
+                       random_seed: int | float | str | bytes | bytearray = 0):
+        """Evaluates a single trained agent's performance.
+
+        What this does is it creates a completely new environment from the
+        provided grid and does a number of steps _without_ processing rewards
+        for the agent. This means that the agent doesn't learn here and simply
+        provides actions for any provided observation.
+
+        For each evaluation run, this produces a statistics file in the out
+        directory which is a txt. This txt contains the values:
+        [ `total_dirt_cleaned`, `total_steps`, `total_retraced_steps`,
+        `total_agents_at_charger`, `total_failed_moves`]
+
+        For each agent, this produces an image file in the given out directory
+        containing the path of the agent throughout the run.
+
+        Args:
+            grid_fp: Path to the grid file to use.
+            agents: A list of trained agents to evaluate.
+            max_steps: Max number of steps to take for each agent.
+            out_dir: Where to save the results.
+            training_time: The total time spent training.
+            sigma: The stochasticity of the environment. The probability that
+                an agent makes the move that it has provided as an action is
+                calculated as 1-sigma.
+            agent_start_pos: List of tuples of where each agent should start.
+                If None is provided, then a random start position for each
+                agent is used.
+            random_seed: The random seed to use for this environment. If None
+                is provided, then the seed will be set to 0.
+            show_images: Whether to show the images at the end of the
+                evaluation. If False, only saves the images.
+        """
+        if not out_dir.exists():
+            warn("Evaluation output directory does not exist. Creating the "
+                 "directory.")
+            out_dir.mkdir(parents=True, exist_ok=True)
+        env = Environment(grid_fp=grid_fp,
+                          no_gui=True,
+                          n_agents=len(agents),
+                          sigma=sigma,
+                          agent_start_pos=[(1, 1)],
+                          target_fps=-1,
+                          random_seed=random_seed)
+        obs, info = env.get_observation()
+
+        # Set initial positions for the agent
+        agent_paths = [[pos] for pos in info['agent_pos']]
+
+        steps = []
+        k = 0
+        for _ in trange(max_steps,
+                        desc=f"Evaluating agent"
+                             f"{'s' if len(agents) > 1 else ''}"):
+            # Get the agent actions
+            actions = [agent.take_action(obs, info)
+                       for agent in agents]
+            # Take a step in the environment
+            obs, reward, terminated, info, actual_action = env.step(actions)
+
+            # Process reward has to be called for the agent to know what is
+            # going on, q_values are not updated!
+            states = [agent.get_state_from_info(obs, info) for agent in agents]
+            for action, state, agent in zip(actions, states, agents):
+                agent.process_reward(obs, reward, info, state, actual_action)
+
+            # Save the new agent locations
+            for i, pos in enumerate(info["agent_pos"]):
+                agent_paths[i].append(pos)
+
+            k += 1
+            if terminated:
+                obs, info, world_stats = env.reset()
+                for agent in agents:
+                    agent.reset_parameters()
+                steps.append(k)
+                k = 0
+
+        x = np.arange(len(steps))
+        plt.plot(x, steps)
+        # Adding labels and title
+        plt.xlabel('The times of reset the envrionment')
+        plt.ylabel('The iters used in before reset ')
+        # Displaying the chart
+        plt.show()
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
