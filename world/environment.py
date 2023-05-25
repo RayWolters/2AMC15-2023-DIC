@@ -616,6 +616,7 @@ class Environment:
         agent_paths = [[pos] for pos in info['agent_pos']]
 
         steps = []
+        total_steps = []
         k = 0
         for _ in trange(max_steps,
                         desc=f"Evaluating agent"
@@ -641,16 +642,19 @@ class Environment:
                 obs, info, world_stats = env.reset()
                 for agent in agents:
                     agent.reset_parameters()
-                steps.append(k)
+                steps.append(world_stats['total_agent_moves'])
+                total_steps.append(world_stats['total_steps'])
                 k = 0
 
-        x = np.arange(len(steps))
-        plt.plot(x, steps)
-        # Adding labels and title
-        plt.xlabel('The times of reset the envrionment')
-        plt.ylabel('The iters used in before reset ')
-        # Displaying the chart
-        plt.show()
+        print('total steps: ', sum(total_steps) / len(total_steps))
+        print('steps: ', sum(steps) / len(steps))
+        # x = np.arange(len(steps))
+        # plt.plot(x, steps)
+        # # Adding labels and title
+        # plt.xlabel('The times of reset the envrionment')
+        # plt.ylabel('The iters used in before reset ')
+        # # Displaying the chart
+        # plt.show()
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
