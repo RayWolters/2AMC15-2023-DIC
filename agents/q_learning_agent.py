@@ -152,6 +152,8 @@ class QLearningAgent(BaseAgent):
         # Extract agent position from info
         agent_pos = info['agent_pos'][self.agent_number]
 
+        # If self.use_grid_state is True, use grid layout as state, with adding
+        # dirty tiles along the way once they are cleaned.
         if self.use_grid_state:
             # Initialize grid state if it is None
             if self.grid_state is None:
