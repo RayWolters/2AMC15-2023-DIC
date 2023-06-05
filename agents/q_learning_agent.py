@@ -57,8 +57,12 @@ class QLearningAgent(BaseAgent):
         """
         agent_pos = info['agent_pos'][self.agent_number]
 
+        if info['agent_charging'][self.agent_number]:
+            reward = 15
+            return reward
+
         # If not making a move, give bad reward
-        if action == 4:
+        if not info['agent_moved'][self.agent_number]:
             reward = -1000
             return reward
 
@@ -71,6 +75,8 @@ class QLearningAgent(BaseAgent):
             if state == self.second_last_state and \
                     info['agent_moved'][self.agent_number]:
                 reward = -4
+                self.second_last_state = self.last_state
+                self.last_state = state
                 return reward
             elif not info['agent_moved'][self.agent_number]:
                 return reward
@@ -85,7 +91,8 @@ class QLearningAgent(BaseAgent):
 
         # If dirt cleaned with move, update grid_state and add tile to
         # cleaned tiles
-        if reward == 10:
+        if info['dirt_cleaned'][self.agent_number] > 0:
+            reward = 10
             self.cleaned_tiles.add(agent_pos)
             if self.use_grid_state:
                 self.grid_state[agent_pos[0]][agent_pos[1]] = 3
