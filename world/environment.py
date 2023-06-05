@@ -320,6 +320,10 @@ class Environment:
             - 2: Move left
             - 3: Move right
             - 4: Stand still
+            - 5: Move top left
+            - 6: Move top right
+            - 7: Move bottom left
+            - 8: Move bottom right
 
         Args:
             actions: List of integers representing the action each agent should
@@ -372,7 +376,7 @@ class Environment:
             if val > self.sigma:
                 actual_action = action
             else:
-                actual_action = random.randint(0, 4)
+                actual_action = random.randint(0, 8)
             match actual_action:
                 case 0:  # Move down
                     new_pos = (self.agent_pos[i][0],
@@ -389,6 +393,18 @@ class Environment:
                 case 4:  # Stand still
                     new_pos = (self.agent_pos[i][0],
                                self.agent_pos[i][1])
+                case 5:  # Move top-left
+                    new_pos = (max(0, self.agent_pos[i][0] - 1),
+                               max(0, self.agent_pos[i][1] - 1))
+                case 6:  # Move top-right
+                    new_pos = (min(max_x, self.agent_pos[i][0] + 1),
+                               max(0, self.agent_pos[i][1] - 1))
+                case 7:  # Move bottom-left
+                    new_pos = (max(0, self.agent_pos[i][0] - 1),
+                               min(max_y, self.agent_pos[i][1] + 1))
+                case 8:  # Move bottom-right
+                    new_pos = (min(max_x, self.agent_pos[i][0] + 1),
+                               min(max_y, self.agent_pos[i][1] + 1))
                 case _:
                     raise ValueError(f"Provided action {action} for agent {i} "
                                      f"is not one of the possible actions.")
@@ -658,7 +674,7 @@ class Environment:
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
-    base_grid_fp = Path("../grid_configs/states_test.grd")
+    base_grid_fp = Path("../grid_configs/11x11.grd")
     envi = Environment(base_grid_fp, False, 1, target_fps=5)
     observe, inf = envi.get_observation()
 
@@ -670,7 +686,7 @@ if __name__ == '__main__':
     # Take 1000 steps with the GUI
     for t in trange(1000):
         act = [test_agent.take_action(observe, inf)]
-        observe, r, term_state, inf = envi.step(act)
+        observe, r, term_state, inf, _ = envi.step(act)
         if term_state:
             break
 
@@ -679,7 +695,7 @@ if __name__ == '__main__':
     print(stats)
     for t in trange(100000):
         act = [test_agent.take_action(observe, inf)]
-        observe, r, term_state, inf = envi.step(act)
+        observe, r, term_state, inf, _ = envi.step(act)
         if term_state:
             break
 

@@ -109,7 +109,7 @@ class QLearningAgent(BaseAgent):
 
         if np.random.uniform() < self.epsilon and self.training:
             # Exploration: Select a random action
-            action = randint(0, 4)
+            action = randint(0, 8)
         else:
             # Exploitation: Select the action with the highest Q-value
             action = self._get_best_action(state)
@@ -132,7 +132,7 @@ class QLearningAgent(BaseAgent):
         """
         q_value = self.q_table.get((state, action), 0.0)
         max_q_value = max(self.q_table.get((next_state, a), 0.0)
-                          for a in range(5))
+                          for a in range(9))
         new_q_value = q_value + self.alpha * \
             (reward + self.gamma * max_q_value - q_value)
 
@@ -197,7 +197,7 @@ class QLearningAgent(BaseAgent):
                 state: State to get best action for.
         """
         # Get the action with the highest Q-value for the given state
-        q_values = [self.q_table.get((state, a), 0.0) for a in range(5)]
+        q_values = [self.q_table.get((state, a), 0.0) for a in range(9)]
 
         # If all values for a given state are 0, argmax always takes first
         # index, which equals a move down, so we want to randomly choose the
