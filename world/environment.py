@@ -528,6 +528,7 @@ class Environment:
             # Get the agent actions
             actions = [agent.take_action(obs, info)
                        for agent in agents]
+
             # Take a step in the environment
             obs, reward, terminated, info, _ = env.step(actions)
 

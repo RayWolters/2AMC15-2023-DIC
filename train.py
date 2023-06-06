@@ -135,8 +135,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         obs, info, world_stats = env.reset()
         print(world_stats)
-        Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
-                                   sigma, agent_start_pos=[(1, 1), (6,6)])
+        Environment.evaluate_agent(grid, agents, 1000, out, training_time,
+                                   sigma, agent_start_pos=[(1, 1), (6, 6)])
         # Environment.evaluate_plot(grid, [agent], 10000, out,
         #                           sigma, agent_start_pos=None)
 
