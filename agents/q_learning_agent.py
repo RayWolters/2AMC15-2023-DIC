@@ -37,6 +37,7 @@ class QLearningAgent(BaseAgent):
         self.last_state = None
         self.second_last_state = None
         self.use_grid_state = use_grid_state
+        self.charging = False
 
     def process_reward(
             self,
@@ -55,47 +56,49 @@ class QLearningAgent(BaseAgent):
                 state: State corresponding to reward.
                 action: Action that reward was earned on.
         """
-        agent_pos = info['agent_pos'][self.agent_number]
+        if not self.charging:
+            agent_pos = info['agent_pos'][self.agent_number]
 
-        if info['agent_charging'][self.agent_number]:
-            reward = 15
-            return reward
+            if info['agent_charging'][self.agent_number]:
+                self.charging = True
+                reward = 15
+                return reward
 
-        # If not making a move, give bad reward
-        if not info['agent_moved'][self.agent_number]:
-            reward = -1000
-            return reward
+            # If not making a move, give bad reward
+            if not info['agent_moved'][self.agent_number]:
+                reward = -1000
+                return reward
 
-        # If returning to previous state, give bad reward
-        if not self.second_last_state:
-            self.second_last_state = state
-        elif not self.last_state:
-            self.last_state = state
-        else:
-            if state == self.second_last_state and \
-                    info['agent_moved'][self.agent_number]:
-                reward = -4
+            # If returning to previous state, give bad reward
+            if not self.second_last_state:
+                self.second_last_state = state
+            elif not self.last_state:
+                self.last_state = state
+            else:
+                if state == self.second_last_state and \
+                        info['agent_moved'][self.agent_number]:
+                    reward = -4
+                    self.second_last_state = self.last_state
+                    self.last_state = state
+                    return reward
+                elif not info['agent_moved'][self.agent_number]:
+                    return reward
                 self.second_last_state = self.last_state
                 self.last_state = state
-                return reward
-            elif not info['agent_moved'][self.agent_number]:
-                return reward
-            self.second_last_state = self.last_state
-            self.last_state = state
 
-        # If moving to state that agent has already been in, give bad reward
-        if state in self.already_visited and \
-                info['agent_moved'][self.agent_number]:
-            reward = -2
-            return reward
+            # If moving to state that agent has already been in, give bad reward
+            if state in self.already_visited and \
+                    info['agent_moved'][self.agent_number]:
+                reward = -2
+                return reward
 
-        # If dirt cleaned with move, update grid_state and add tile to
-        # cleaned tiles
-        if info['dirt_cleaned'][self.agent_number] > 0:
-            reward = 10
-            self.cleaned_tiles.add(agent_pos)
-            if self.use_grid_state:
-                self.grid_state[agent_pos[0]][agent_pos[1]] = 3
+            # If dirt cleaned with move, update grid_state and add tile to
+            # cleaned tiles
+            if info['dirt_cleaned'][self.agent_number] > 0:
+                reward = 10
+                self.cleaned_tiles.add(agent_pos)
+                if self.use_grid_state:
+                    self.grid_state[agent_pos[0]][agent_pos[1]] = 3
 
         return reward
 
@@ -137,13 +140,14 @@ class QLearningAgent(BaseAgent):
                 reward: Reward corresponding to action in old state.
                 next_state: New state after performing action in old state.
         """
-        q_value = self.q_table.get((state, action), 0.0)
-        max_q_value = max(self.q_table.get((next_state, a), 0.0)
-                          for a in range(9))
-        new_q_value = q_value + self.alpha * \
-            (reward + self.gamma * max_q_value - q_value)
+        if not self.charging:
+            q_value = self.q_table.get((state, action), 0.0)
+            max_q_value = max(self.q_table.get((next_state, a), 0.0)
+                              for a in range(9))
+            new_q_value = q_value + self.alpha * \
+                (reward + self.gamma * max_q_value - q_value)
 
-        self.q_table[(state, action)] = new_q_value
+            self.q_table[(state, action)] = new_q_value
 
     def get_state_from_info(
             self,
@@ -193,6 +197,7 @@ class QLearningAgent(BaseAgent):
         self.last_state = None
         self.second_last_state = None
         self.grid_state = None
+        self.charging = False
 
     def _get_best_action(
             self,

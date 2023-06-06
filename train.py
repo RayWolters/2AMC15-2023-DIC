@@ -79,69 +79,66 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
-        env = Environment(grid, no_gui, n_agents=1, agent_start_pos=None,
+        env = Environment(grid, no_gui, n_agents=2, agent_start_pos=[(1, 1), (6,6)],
                           reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
         obs, info = env.get_observation()
 
         # Set up the agents from scratch for every grid
         # Add your agents here
-        agents = [QLearningAgent(agent_number=0, use_grid_state=True)]
+        agents = [QLearningAgent(agent_number=0, use_grid_state=True),
+                  QLearningAgent(agent_number=1, use_grid_state=True)]
 
         # Iterate through each agent for `iters` iterations
-        for agent in agents:
-            k = 0
-            steps = []
-            start_time = time.time()
-            for _ in trange(iters):
-                old_state = agent.get_state_from_info(
-                    obs, info)  # Convert observation to state
-                action = agent.take_action(obs, info)
+        # for agent in agents:
+        start_time = time.time()
+        for _ in trange(iters):
+            old_states = [agent.get_state_from_info(
+                obs, info) for agent in agents] # Convert observation to state
+            actions = [int(agent.take_action(obs, info)) for agent in agents]
 
-                obs, reward, terminated, info, actual_action = env.step([action])
-                state = agent.get_state_from_info(
-                    obs, info)  # Convert next observation to state
+            obs, reward, terminated, info, actual_actions = env.step(actions)
 
-                reward = agent.process_reward(
+            states = [agent.get_state_from_info(
+                obs, info) for agent in agents] # Convert next observation to state
+
+            for i, (state, agent) in enumerate(zip(states, agents)):
+                reward = (agent.process_reward(
                     obs,
                     reward,
                     info,
                     state,
-                    actual_action
-                )
+                    actual_actions
+                ))
 
                 new_state = agent.get_state_from_info(
                     obs, info)
 
                 agent.update_q_values(
-                    old_state,
-                    actual_action,
+                    old_states[i],
+                    actual_actions[i],
                     reward,
                     new_state
                 )
-                k += 1
-
-                k += 1
-                # If the agent is terminated, we reset the env.
-                if terminated:
-                    obs, info, world_stats = env.reset()
+            # If the agent is terminated, we reset the env.
+            if terminated:
+                obs, info, world_stats = env.reset()
+                for agent in agents:
                     agent.reset_parameters()
-                    steps.append(k)
-                    k = 0
 
-            training_time = time.time() - start_time
+        training_time = time.time() - start_time
 
-            # Reset parameters and disable training mode
+        # Reset parameters and disable training mode
+        for agent in agents:
             agent.reset_parameters()
             agent.training = False
 
-            obs, info, world_stats = env.reset()
-            print(world_stats)
-            Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
-                                       sigma, agent_start_pos=None)
-            # Environment.evaluate_plot(grid, [agent], 10000, out,
-            #                           sigma, agent_start_pos=None)
-            # plot(y=steps)
+        obs, info, world_stats = env.reset()
+        print(world_stats)
+        Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
+                                   sigma, agent_start_pos=[(1, 1), (6,6)])
+        # Environment.evaluate_plot(grid, [agent], 10000, out,
+        #                           sigma, agent_start_pos=None)
 
 
 

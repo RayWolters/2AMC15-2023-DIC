@@ -366,9 +366,11 @@ class Environment:
         max_x = self.grid.n_cols - 1
         max_y = self.grid.n_rows - 1
 
+        actual_actions = []
         for i, action in enumerate(actions):
             if self.agent_done[i]:
                 # The agent is already on the charger, so it is done.
+                actual_actions.append(action)
                 continue
 
             # Add stochasticity into the agent action
@@ -409,6 +411,7 @@ class Environment:
                     raise ValueError(f"Provided action {action} for agent {i} "
                                      f"is not one of the possible actions.")
             self._move_agent(new_pos, i)
+            actual_actions.append(actual_action)
 
         # Update the grid with the new agent positions and calculate the reward
         reward = self.reward_fn(self.grid, self.info)
@@ -425,7 +428,7 @@ class Environment:
                             is_single_step)
 
         return self.grid.cells, reward, terminal_state, self.info, \
-               actual_action
+               actual_actions
 
     @staticmethod
     def get_charger_location(observation) -> tuple:
