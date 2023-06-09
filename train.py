@@ -120,6 +120,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     reward,
                     new_state
                 )
+
             # If the agent is terminated, we reset the env.
             if terminated:
                 obs, info, world_stats = env.reset()

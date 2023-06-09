@@ -526,8 +526,7 @@ class Environment:
                         desc=f"Evaluating agent"
                              f"{'s' if len(agents) > 1 else ''}"):
             # Get the agent actions
-            actions = [agent.take_action(obs, info)
-                       for agent in agents]
+            actions = [agent.take_action(obs, info) for agent in agents]
 
             # Take a step in the environment
             obs, reward, terminated, info, _ = env.step(actions)

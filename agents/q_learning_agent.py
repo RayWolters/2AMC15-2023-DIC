@@ -174,8 +174,13 @@ class QLearningAgent(BaseAgent):
             # q table, this is however slower than using surroundings and
             # clean tiles.
             grid_state = tuple(self.grid_state.flatten())
-
-            state = (grid_state, agent_pos)
+            if any(info['agent_charging']):
+                agents_at_chargers = [i for i, x in
+                                      enumerate(info['agent_charging']) if x]
+                # TODO: add state for location for agents that are at chargers
+                state = (grid_state, agent_pos)
+            else:
+                state = (grid_state, agent_pos)
         else:
             surroundings = self._get_surroundings(observation, agent_pos, 1)
             cleaned_tiles = tuple(self.cleaned_tiles)
