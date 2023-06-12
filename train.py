@@ -105,7 +105,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     reward,
                     info,
                     state,
-                    actual_action
+                    actual_action,
+                    old_state
                 )
 
                 new_state = agent.get_state_from_info(
