@@ -90,8 +90,6 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
-            k = 0
-            steps = []
             start_time = time.time()
             for _ in trange(iters):
                 old_state = agent.get_state_from_info(
@@ -119,15 +117,11 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                     reward,
                     new_state
                 )
-                k += 1
 
-                k += 1
                 # If the agent is terminated, we reset the env.
                 if terminated:
                     obs, info, world_stats = env.reset()
                     agent.reset_parameters()
-                    steps.append(k)
-                    k = 0
 
             training_time = time.time() - start_time
 
@@ -141,7 +135,6 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                                        sigma, agent_start_pos=None)
             # Environment.evaluate_plot(grid, [agent], 10000, out,
             #                           sigma, agent_start_pos=None)
-            # plot(y=steps)
 
 
 
