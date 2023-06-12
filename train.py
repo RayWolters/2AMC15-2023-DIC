@@ -86,7 +86,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Set up the agents from scratch for every grid
         # Add your agents here
-        agents = [QLearningAgent(agent_number=0, use_grid_state=True)]
+        agents = [QLearningAgent(agent_number=0)]
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
