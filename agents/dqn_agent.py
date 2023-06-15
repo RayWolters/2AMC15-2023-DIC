@@ -18,7 +18,7 @@ class DQN(nn.Module):
         # Define the Convolutional layers
         self.conv = nn.Sequential(
             # First Convolutional Layer
-            nn.Conv2d(input_shape[0], 64, kernel_size=4, stride=1, padding=1),
+            nn.Conv2d(input_shape[0], 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
 
             # Second Convolutional Layer
@@ -86,7 +86,6 @@ class DQLAgent(BaseAgent):
         self.training = training
 
         self.epsilon_min = 0.1
-        self.epsilon_decay = 0.9995
 
         self.already_visited = set()
         self.cleaned_tiles = set()
@@ -101,7 +100,7 @@ class DQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=10000)  # Experience Replay buffer
+        self.memory = deque(maxlen=2000)  # Experience Replay buffer
 
     def process_reward(
             self,
@@ -219,10 +218,10 @@ class DQLAgent(BaseAgent):
         loss = self.loss_fn(current_q_values, target_q_values.detach())
         self.optimizer.zero_grad()
         loss.backward()
-        loss_item = loss.item()
+        # loss_item = loss.item()
         self.optimizer.step()
 
-        return loss_item
+        # return loss_item
 
     def get_state_from_info(self, observation: np.ndarray,
                             info: dict) -> np.ndarray:

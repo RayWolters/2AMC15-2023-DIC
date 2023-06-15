@@ -91,7 +91,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         # Set up the agents from scratch for every grid
         # Add your agents here
 
-        channels_used = 5
+        channels_used = 4
 
         agents = [
             DQLAgent(
@@ -125,16 +125,16 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 )
 
                 agent.remember(old_state, actual_action, reward, new_state, terminated)
-                losses.append(agent.update_q_values())
+                agent.update_q_values()
 
-                if _ % 250 == 0:  # you can adjust the frequency
+                if _ % 400 == 0:  # you can adjust the frequency
                     agent.synchronize_target_network()
 
                 # If the agent is terminated, we reset the env.
                 if terminated:
                     obs, info, world_stats = env.reset()
                     agent.reset_parameters()
-            plot(losses)
+
             training_time = time.time() - start_time
 
             # Reset parameters and disable training mode

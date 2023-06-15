@@ -433,16 +433,27 @@ class Environment:
         coordinates = (int(indices[0][0]), int(indices[1][0]))
         return coordinates
 
+    # @staticmethod
+    # def simple_reward_function(grid: Grid, info: dict) -> float:
+    #     if info["agent_charging"][0]:
+    #         return 15
+    #     elif not info["agent_moved"][0]:
+    #         return -1000.0
+    #     elif info["dirt_cleaned"][0] > 0:
+    #         return 10
+    #     else:
+    #         return -1
+
     @staticmethod
     def simple_reward_function(grid: Grid, info: dict) -> float:
         if info["agent_charging"][0]:
-            return 15
+            return 1
         elif not info["agent_moved"][0]:
-            return -1000.0
-        elif info["dirt_cleaned"][0] > 0:
-            return 10
-        else:
             return -1
+        elif info["dirt_cleaned"][0] > 0:
+            return 0.9
+        else:
+            return -0.05
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:
@@ -529,6 +540,7 @@ class Environment:
         for _ in trange(max_steps,
                         desc=f"Evaluating agent"
                              f"{'s' if len(agents) > 1 else ''}"):
+            old_states = [agent.get_state_from_info(obs, info) for agent in agents]
             # Get the agent actions
             actions = [agent.take_action(obs, info)
                        for agent in agents]
@@ -538,8 +550,8 @@ class Environment:
             # Process reward has to be called for the agent to know what is
             # going on, q_values are not updated!
             states = [agent.get_state_from_info(obs, info) for agent in agents]
-            for action, state, agent in zip(actions, states, agents):
-                agent.process_reward(obs, reward, info, state, action)
+            for action, state, agent, old_state in zip(actions, states, agents, old_states):
+                agent.process_reward(obs, reward, info, state, action, old_states)
 
             # Save the new agent locations
             for i, pos in enumerate(info["agent_pos"]):
