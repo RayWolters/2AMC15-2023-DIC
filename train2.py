@@ -91,7 +91,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         # Set up the agents from scratch for every grid
         # Add your agents here
 
-        channels_used = 4
+        channels_used = 5
 
         agents = [
             DQLAgent(
