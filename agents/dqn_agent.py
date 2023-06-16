@@ -18,18 +18,18 @@ class DQN(nn.Module):
         # Define the Convolutional layers
         self.conv = nn.Sequential(
             # First Convolutional Layer
-            nn.Conv2d(input_shape[0], 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(input_shape[0], 64, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
 
             # # Max Pooling Layer
             # nn.MaxPool2d(kernel_size=2, stride=2),
 
             # Third Convolutional Layer
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU()
         )
 
@@ -38,11 +38,11 @@ class DQN(nn.Module):
 
         # Define the Fully Connected layers
         self.fc = nn.Sequential(
-            nn.Linear(conv_out_size, 128),
+            nn.Linear(conv_out_size, 128),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
-            nn.Linear(128, 9),
-            # nn.ReLU(),
-            # nn.Linear(128, 9)
+            nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.ReLU(),
+            nn.Linear(128, 9)  # IMPORTANT FOR TESTING AND TWEAKING
         )
 
     def _get_conv_out(self, shape):
@@ -65,10 +65,11 @@ class DQLAgent(BaseAgent):
             self,
             agent_number,
             input_dim,
-            alpha=0.001,
-            gamma=0.99,
+            alpha=0.001,  # IMPORTANT FOR TESTING AND TWEAKING
+            gamma=0.99,  # IMPORTANT FOR TESTING AND TWEAKING
             epsilon=1.0,
-            training=True
+            training=True,
+            ddqn=True
     ):
         """
             Q-Learning agent for grid cleaning.
@@ -84,6 +85,7 @@ class DQLAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
         self.training = training
+        self.ddqn = ddqn
 
         self.epsilon_min = 0.1
 
@@ -92,7 +94,7 @@ class DQLAgent(BaseAgent):
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
-        self.batch_size = 64
+        self.batch_size = 64  # IMPORTANT FOR TESTING AND TWEAKING
 
         self.input_dim = input_dim
         self.dqn = DQN(self.input_dim)
@@ -100,7 +102,7 @@ class DQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=2000)  # Experience Replay buffer
+        self.memory = deque(maxlen=2500)  # IMPORTANT FOR TESTING AND TWEAKING
 
     def process_reward(
             self,
@@ -207,9 +209,20 @@ class DQLAgent(BaseAgent):
         current_q_values = self.dqn(states).gather(1, actions.unsqueeze(
             1)).squeeze()
 
-        # Compute next Q values using the target network
-        with torch.no_grad():
-            next_q_values = self.target_dqn(next_states).max(1)[0]
+        if self.ddqn:
+            # Compute next Q values using the online network for selecting the action
+            # and the target network for evaluating the action
+            with torch.no_grad():
+                # Use online network to select actions
+                selected_actions = self.dqn(next_states).max(1)[1].unsqueeze(1)
+                # Use target network to evaluate the selected actions
+                next_q_values = self.target_dqn(next_states).gather(1,
+                                                                    selected_actions).squeeze()
+        else:
+            # Compute next Q values using the target network
+            with torch.no_grad():
+                next_q_values = self.target_dqn(next_states).max(1)[0]
+
 
         # Compute target Q values
         target_q_values = rewards + (1 - dones) * self.gamma * next_q_values
@@ -218,10 +231,7 @@ class DQLAgent(BaseAgent):
         loss = self.loss_fn(current_q_values, target_q_values.detach())
         self.optimizer.zero_grad()
         loss.backward()
-        # loss_item = loss.item()
         self.optimizer.step()
-
-        # return loss_item
 
     def get_state_from_info(self, observation: np.ndarray,
                             info: dict) -> np.ndarray:

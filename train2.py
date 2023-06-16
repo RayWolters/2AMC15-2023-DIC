@@ -127,7 +127,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 agent.remember(old_state, actual_action, reward, new_state, terminated)
                 agent.update_q_values()
 
-                if _ % 400 == 0:  # you can adjust the frequency
+                if _ % 400 == 0:  # IMPORTANT FOR TESTING AND TWEAKING
                     agent.synchronize_target_network()
 
                 # If the agent is terminated, we reset the env.
