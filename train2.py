@@ -91,7 +91,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         # Set up the agents from scratch for every grid
         # Add your agents here
 
-        channels_used = 5
+        channels_used = 4
 
         agents = [
             DQLAgent(
@@ -127,7 +127,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 agent.remember(old_state, actual_action, reward, new_state, terminated)
                 agent.update_q_values()
 
-                if _ % 400 == 0:  # IMPORTANT FOR TESTING AND TWEAKING
+                if _ % 500 == 0:  # IMPORTANT FOR TESTING AND TWEAKING
                     agent.synchronize_target_network()
 
                 # If the agent is terminated, we reset the env.

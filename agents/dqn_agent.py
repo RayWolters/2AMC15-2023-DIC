@@ -8,6 +8,8 @@ from agents import BaseAgent
 from collections import deque
 np.set_printoptions(threshold=sys.maxsize)
 
+device = torch.device("mps")
+
 class DQN(nn.Module):
     def __init__(self, input_shape):
         super(DQN, self).__init__()
@@ -39,8 +41,8 @@ class DQN(nn.Module):
         # Define the Fully Connected layers
         self.fc = nn.Sequential(
             nn.Linear(conv_out_size, 128),  # IMPORTANT FOR TESTING AND TWEAKING
-            nn.ReLU(),
-            nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
+            # nn.ReLU(),
+            # nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
             nn.Linear(128, 9)  # IMPORTANT FOR TESTING AND TWEAKING
         )
@@ -52,11 +54,11 @@ class DQN(nn.Module):
 
     def forward(self, x):
         # Forward pass through Convolutional layers
-        x = self.conv(x)
+        x = self.conv(x.to(device))
         # Flatten the output
         x = x.view(x.size(0), -1)
         # Forward pass through Fully Connected layers
-        x = self.fc(x)
+        x = self.fc(x.to(device))
         return x
 
 
@@ -94,15 +96,15 @@ class DQLAgent(BaseAgent):
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
-        self.batch_size = 64  # IMPORTANT FOR TESTING AND TWEAKING
+        self.batch_size = 100  # IMPORTANT FOR TESTING AND TWEAKING
 
         self.input_dim = input_dim
-        self.dqn = DQN(self.input_dim)
-        self.target_dqn = DQN(self.input_dim)
+        self.dqn = DQN(self.input_dim).to(device)
+        self.target_dqn = DQN(self.input_dim).to(device)
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=2500)  # IMPORTANT FOR TESTING AND TWEAKING
+        self.memory = deque(maxlen=3000)  # IMPORTANT FOR TESTING AND TWEAKING
 
     def process_reward(
             self,
@@ -195,9 +197,6 @@ class DQLAgent(BaseAgent):
         # Process the batch
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        # Convert to tensors and move to device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         states = torch.tensor(np.stack(states), dtype=torch.float32).to(device)
         actions = torch.tensor(actions, dtype=torch.long).to(device)
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
@@ -251,14 +250,14 @@ class DQLAgent(BaseAgent):
             self.grid_state = self.get_dirtless_grid(observation)
 
         # Make a copy of the grid to avoid modifying the original
-        grid_state = np.copy(observation)
+        grid_state = np.copy(self.grid_state)
 
         # Create channels
         # Channel 1: Walls and obstacles (1 for walls/obstacles, 0 otherwise)
         walls_channel = np.where(grid_state == 1, 1, 0) + np.where(
             grid_state == 2, 1, 0)
 
-        empty_channel = np.where(grid_state == 0, 1, 0)
+        # empty_channel = np.where(grid_state == 0, 1, 0)
         dirt_channel = np.where(grid_state == 3, 1, 0)
         charge_channel = np.where(grid_state == 4, 1, 0)
 
@@ -266,7 +265,7 @@ class DQLAgent(BaseAgent):
         agent_pos_channel[agent_pos[0], agent_pos[1]] = 1
 
         final_state = np.stack(
-            [walls_channel, empty_channel, dirt_channel, charge_channel,
+            [walls_channel, dirt_channel, charge_channel,
              agent_pos_channel], axis=0)
 
         return final_state
