@@ -25,7 +25,7 @@ class DQN(nn.Module):
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=4, stride=1, padding=1),
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),
             nn.ReLU(),
 
             # Third Convolutional Layer
