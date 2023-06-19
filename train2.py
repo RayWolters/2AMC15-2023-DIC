@@ -82,7 +82,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
-        start_pos = [(2, 1)]
+        start_pos = [(1, 1)]
 
         env = Environment(grid, no_gui, n_agents=1, agent_start_pos=start_pos,
                           reward_fn=Environment.simple_reward_function,
@@ -135,7 +135,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 agent.remember(old_state, actual_action, reward, new_state, terminated)
                 agent.update_q_values()
 
-                if _ % (iters/40) == 0:  # IMPORTANT FOR TESTING AND TWEAKING
+                if _ % (iters/25) == 0:  # IMPORTANT FOR TESTING AND TWEAKING
                     agent.synchronize_target_network()
 
                 # If the agent is terminated, we reset the env.
@@ -151,6 +151,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
             obs, info, world_stats = env.reset()
             print(world_stats)
+            print(agent)
             Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
                                        sigma, agent_start_pos=start_pos)
             # Environment.evaluate_plot(grid, [agent], 10000, out,
