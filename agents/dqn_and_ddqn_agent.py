@@ -20,11 +20,11 @@ class DQN(nn.Module):
         # Define the Convolutional layers
         self.conv = nn.Sequential(
             # First Convolutional Layer
-            nn.Conv2d(input_shape[0], 64, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(input_shape[0], 64, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(64, 128, kernel_size=4, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
 
             # # Max Pooling Layer
@@ -41,9 +41,9 @@ class DQN(nn.Module):
         # Define the Fully Connected layers
         self.fc = nn.Sequential(
             nn.Linear(conv_out_size, 128),  # IMPORTANT FOR TESTING AND TWEAKING
-            # nn.ReLU(),
-            # nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
             nn.ReLU(),
+            # nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
+            # nn.ReLU(),
             nn.Linear(128, 9)  # IMPORTANT FOR TESTING AND TWEAKING
         )
 
@@ -96,7 +96,7 @@ class DQLAgent(BaseAgent):
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
-        self.batch_size = 100  # IMPORTANT FOR TESTING AND TWEAKING
+        self.batch_size = 150  # IMPORTANT FOR TESTING AND TWEAKING
 
         self.input_dim = input_dim
         self.dqn = DQN(self.input_dim).to(device)
@@ -104,7 +104,7 @@ class DQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=3000)  # IMPORTANT FOR TESTING AND TWEAKING
+        self.memory = deque(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
 
     def process_reward(
             self,
@@ -139,17 +139,20 @@ class DQLAgent(BaseAgent):
 
         # If returning to previous state, give bad reward
         if not self.second_last_state:
-            self.second_last_state = flat_state
-        elif not self.last_state:
+            self.second_last_state = tuple(old_state.flatten())
             self.last_state = flat_state
         else:
             if flat_state == self.second_last_state and \
                     info['agent_moved'][self.agent_number]:
+                self.second_last_state = tuple(old_state.flatten())
+                self.last_state = flat_state
                 reward = -0.9
                 return reward
             elif not info['agent_moved'][self.agent_number]:
+                self.second_last_state = tuple(old_state.flatten())
+                self.last_state = flat_state
                 return reward
-            self.second_last_state = self.last_state
+            self.second_last_state = tuple(old_state.flatten())
             self.last_state = flat_state
 
         # If moving to state that agent has already been in, give bad reward
