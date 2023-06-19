@@ -22,8 +22,9 @@ try:
     from agents.greedy_agent import GreedyAgent
     from agents.random_agent import RandomAgent
     from agents.q_learning_agent import QLearningAgent
-    from agents.deep_q_learning_agent import DQLearningAgent
-    from agents.dqn_agent import DQLAgent
+    from agents.dqn_and_ddqn_agent import DQLAgent
+    from agents.duel_and_ddqn_agent import DuelQLAgent
+    from agents.dqn_per_agent import PERDQLAgent
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -97,13 +98,20 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             DQLAgent(
                 agent_number=0,
                 input_dim=(channels_used, len(obs), len(obs[0]))
-            )
+            ),
+            DuelQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0]))
+            ),
+            PERDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0]))
+            ),
         ]
 
         # Iterate through each agent for `iters` iterations
         for agent in agents:
             start_time = time.time()
-            losses = []
             for _ in trange(iters):
                 old_state = agent.get_state_from_info(
                     obs, info)  # Convert observation to state
@@ -127,7 +135,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
                 agent.remember(old_state, actual_action, reward, new_state, terminated)
                 agent.update_q_values()
 
-                if _ % 500 == 0:  # IMPORTANT FOR TESTING AND TWEAKING
+                if _ % (iters/40) == 0:  # IMPORTANT FOR TESTING AND TWEAKING
                     agent.synchronize_target_network()
 
                 # If the agent is terminated, we reset the env.

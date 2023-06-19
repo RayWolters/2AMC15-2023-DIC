@@ -551,7 +551,7 @@ class Environment:
             # going on, q_values are not updated!
             states = [agent.get_state_from_info(obs, info) for agent in agents]
             for action, state, agent, old_state in zip(actions, states, agents, old_states):
-                agent.process_reward(obs, reward, info, state, action, old_states)
+                agent.process_reward(obs, reward, info, state, action, old_state)
 
             # Save the new agent locations
             for i, pos in enumerate(info["agent_pos"]):
