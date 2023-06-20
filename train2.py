@@ -7,11 +7,15 @@ In this example training script, we use command line arguments. Feel free to
 change this to however you want it to work.
 """
 from argparse import ArgumentParser
+from datetime import datetime
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
 import time
+
+import torch
 from tqdm import trange
 
 try:
@@ -25,6 +29,7 @@ try:
     from agents.dqn_and_ddqn_agent import DQLAgent
     from agents.duel_and_ddqn_agent import DuelQLAgent
     from agents.dqn_per_agent import PERDQLAgent
+    from agents.ddqn_duel_and_per_agent import PERDuelDQLAgent
 except ModuleNotFoundError:
     from os import path
     from os import pardir
@@ -97,15 +102,28 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         agents = [
             DQLAgent(
                 agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0]))
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=False
+            ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
             ),
             DuelQLAgent(
                 agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0]))
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
             ),
             PERDQLAgent(
                 agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0]))
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDuelDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
             ),
         ]
 
@@ -148,6 +166,9 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             # Reset parameters and disable training mode
             agent.reset_parameters()
             agent.training = False
+
+            file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
+            torch.save(agent.dqn.state_dict(), f'models/model-{file_name}.pth')
 
             obs, info, world_stats = env.reset()
             print(world_stats)

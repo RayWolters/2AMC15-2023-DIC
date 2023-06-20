@@ -5,10 +5,54 @@ import torch.nn as nn
 import torch.optim as optim
 import sys
 from agents import BaseAgent
-from collections import deque
+from collections import deque, namedtuple
 np.set_printoptions(threshold=sys.maxsize)
 
 device = torch.device("mps")
+Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
+
+
+class PrioritizedReplayBuffer:
+    def __init__(self, maxlen, alpha=0.4, beta=0.6, epsilon=0.01):
+        self.maxlen = maxlen
+        self.alpha = alpha
+        self.beta = beta
+        self.epsilon = epsilon
+        self.buffer = []
+        self.priorities = np.zeros(maxlen, dtype=np.float32)
+        self.pos = 0
+        self.size = 0
+
+    def add(self, state, action, reward, next_state, done):
+        experience = Experience(state, action, reward, next_state, done)
+        if self.size < self.maxlen:
+            self.buffer.append(experience)
+        else:
+            self.buffer[self.pos] = experience
+        self.priorities[self.pos] = self.priorities.max() if self.size > 0 else 1.0
+        self.pos = (self.pos + 1) % self.maxlen
+        self.size = min(self.size + 1, self.maxlen)
+
+    def sample_batch(self, batch_size):
+        priorities = self.priorities[:self.size]
+        probabilities = priorities ** self.alpha
+        probabilities /= probabilities.sum()
+
+        indices = np.random.choice(self.size, batch_size, replace=False, p=probabilities)
+        weights = (self.size * probabilities[indices]) ** (-self.beta)
+        weights /= weights.max()
+
+        batch = [self.buffer[idx] for idx in indices]
+
+        return batch, weights, indices
+
+    def update_priorities(self, indices, td_errors):
+        priorities = td_errors + self.epsilon
+        self.priorities[indices] = priorities
+
+    def __len__(self):
+        return self.size
+
 
 class DQN(nn.Module):
     def __init__(self, input_shape):
@@ -20,31 +64,33 @@ class DQN(nn.Module):
         # Define the Convolutional layers
         self.conv = nn.Sequential(
             # First Convolutional Layer
-            nn.Conv2d(input_shape[0], 64, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(input_shape[0], 64, kernel_size=5, stride=1, padding=1),
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),
             nn.ReLU(),
 
-            # # Max Pooling Layer
-            # nn.MaxPool2d(kernel_size=2, stride=2),
-
             # Third Convolutional Layer
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU()
         )
 
         # Calculate the output size after Convolutional layers
         conv_out_size = self._get_conv_out(input_shape)
 
-        # Define the Fully Connected layers
-        self.fc = nn.Sequential(
-            nn.Linear(conv_out_size, 128),  # IMPORTANT FOR TESTING AND TWEAKING
+        # Define the advantage stream
+        self.advantage_stream = nn.Sequential(
+            nn.Linear(conv_out_size, 128),
             nn.ReLU(),
-            # nn.Linear(128, 128),  # IMPORTANT FOR TESTING AND TWEAKING
-            # nn.ReLU(),
-            nn.Linear(128, 9)  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Linear(128, 9)
+        )
+
+        # Define the value stream
+        self.value_stream = nn.Sequential(
+            nn.Linear(conv_out_size, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1)
         )
 
     def _get_conv_out(self, shape):
@@ -57,12 +103,15 @@ class DQN(nn.Module):
         x = self.conv(x.to(device))
         # Flatten the output
         x = x.view(x.size(0), -1)
-        # Forward pass through Fully Connected layers
-        x = self.fc(x.to(device))
-        return x
+        # Split the flattened output into advantage and value streams
+        advantage = self.advantage_stream(x.to(device))
+        value = self.value_stream(x.to(device))
+        # Combine advantage and value streams to get Q-values
+        q_values = value + (advantage - advantage.mean(dim=1, keepdim=True))
+        return q_values
 
 
-class DQLAgent(BaseAgent):
+class PERDuelDQLAgent(BaseAgent):
     def __init__(
             self,
             agent_number,
@@ -104,7 +153,7 @@ class DQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
+        self.memory = PrioritizedReplayBuffer(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
 
     def process_reward(
             self,
@@ -195,10 +244,13 @@ class DQLAgent(BaseAgent):
             # Not enough samples in memory to create a batch
             return
 
-        batch = random.sample(self.memory, self.batch_size)
+        # Sample a batch of experiences from the prioritized replay buffer
+        batch, weights, indices = self.memory.sample_batch(self.batch_size)
 
         # Process the batch
         states, actions, rewards, next_states, dones = zip(*batch)
+
+        # Convert to tensors and move to device
 
         states = torch.tensor(np.stack(states), dtype=torch.float32).to(device)
         actions = torch.tensor(actions, dtype=torch.long).to(device)
@@ -206,34 +258,40 @@ class DQLAgent(BaseAgent):
         next_states = torch.tensor(np.stack(next_states),
                                    dtype=torch.float32).to(device)
         dones = torch.tensor(dones, dtype=torch.float32).to(device)
+        weights = torch.tensor(weights, dtype=torch.float32).to(device)
 
         # Compute current Q values
         current_q_values = self.dqn(states).gather(1, actions.unsqueeze(
             1)).squeeze()
 
         if self.ddqn:
-            # Compute next Q values using the online network for selecting the action
-            # and the target network for evaluating the action
-            with torch.no_grad():
-                # Use online network to select actions
-                selected_actions = self.dqn(next_states).max(1)[1].unsqueeze(1)
-                # Use target network to evaluate the selected actions
-                next_q_values = self.target_dqn(next_states).gather(1,
-                                                                    selected_actions).squeeze()
-        else:
-            # Compute next Q values using the target network
-            with torch.no_grad():
-                next_q_values = self.target_dqn(next_states).max(1)[0]
+            # Compute next Q values using the main network for action selection
+            next_q_values = self.dqn(next_states)
+            next_actions = next_q_values.argmax(dim=1, keepdim=True)
 
+            # Compute next Q values using the target network for value estimation
+            with torch.no_grad():
+                next_q_values_target = self.target_dqn(next_states).gather(1,
+                                                                           next_actions).squeeze()
+        else:
+            with torch.no_grad():
+                next_q_values = self.target_dqn(next_states)
+                next_actions = next_q_values.argmax(dim=1, keepdim=True)
+                next_q_values_target = self.target_dqn(next_states).gather(1,
+                                                                           next_actions).squeeze()
 
         # Compute target Q values
         target_q_values = rewards + (1 - dones) * self.gamma * next_q_values
 
-        # Compute the loss and perform optimization
-        loss = self.loss_fn(current_q_values, target_q_values.detach())
+        # Compute the loss and perform optimization with importance sampling weights
+        loss = (weights * self.loss_fn(current_q_values, target_q_values.detach())).mean()
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        # Update priorities in the prioritized replay buffer based on TD errors
+        td_errors = torch.abs(target_q_values - current_q_values).detach().cpu().numpy()
+        self.memory.update_priorities(indices, td_errors)
 
     def get_state_from_info(self, observation: np.ndarray,
                             info: dict) -> np.ndarray:
@@ -299,9 +357,17 @@ class DQLAgent(BaseAgent):
 
     def remember(self, state, action, reward, next_state, done):
         if done:
-            self.memory.append((state, action, reward, next_state, 1))
+            experience = Experience(state, action, reward, next_state,
+                                    1)
+            self.memory.add(experience.state, experience.action,
+                            experience.reward,
+                            experience.next_state, experience.done)
         else:
-            self.memory.append((state, action, reward, next_state, 0))
+            experience = Experience(state, action, reward, next_state,
+                                    0)
+            self.memory.add(experience.state, experience.action,
+                            experience.reward,
+                            experience.next_state, experience.done)
 
     def synchronize_target_network(self):
         self.target_dqn.load_state_dict(self.dqn.state_dict())

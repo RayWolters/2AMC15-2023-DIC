@@ -68,7 +68,7 @@ class DQN(nn.Module):
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=4, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING (KERNEL OF 5 WORKS BEST HERE)
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING (KERNEL OF 5 WORKS BEST HERE)
             nn.ReLU(),
 
             # # Max Pooling Layer
@@ -259,9 +259,19 @@ class PERDQLAgent(BaseAgent):
         current_q_values = self.dqn(states).gather(1, actions.unsqueeze(
             1)).squeeze()
 
-        # Compute next Q values using the target network
-        with torch.no_grad():
-            next_q_values = self.target_dqn(next_states).max(1)[0]
+        if self.ddqn:
+            # Compute next Q values using the online network for selecting the action
+            # and the target network for evaluating the action
+            with torch.no_grad():
+                # Use online network to select actions
+                selected_actions = self.dqn(next_states).max(1)[1].unsqueeze(1)
+                # Use target network to evaluate the selected actions
+                next_q_values = self.target_dqn(next_states).gather(1,
+                                                                    selected_actions).squeeze()
+        else:
+            # Compute next Q values using the target network
+            with torch.no_grad():
+                next_q_values = self.target_dqn(next_states).max(1)[0]
 
         # Compute target Q values
         target_q_values = rewards + (1 - dones) * self.gamma * next_q_values
