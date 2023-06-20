@@ -281,7 +281,7 @@ class PERDuelDQLAgent(BaseAgent):
                                                                            next_actions).squeeze()
 
         # Compute target Q values
-        target_q_values = rewards + (1 - dones) * self.gamma * next_q_values
+        target_q_values = rewards + (1 - dones) * self.gamma * next_q_values_target
 
         # Compute the loss and perform optimization with importance sampling weights
         loss = (weights * self.loss_fn(current_q_values, target_q_values.detach())).mean()
