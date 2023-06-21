@@ -193,8 +193,8 @@ class QLearningAgent(BaseAgent):
         # If all values for a given state are 0, argmax always takes first
         # index, which equals a move down, so we want to randomly choose the
         # move if everything is 0.
-        if all(v == 0.0 for v in q_values) and self.training:
-            return randint(0, 4)
+        if all(v == 0.0 for v in q_values):
+            return randint(0, 8)
         return int(np.argmax(q_values))
 
     def get_dirtless_grid(
