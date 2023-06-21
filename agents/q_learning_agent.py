@@ -9,7 +9,7 @@ class QLearningAgent(BaseAgent):
             agent_number,
             alpha=0.1,
             gamma=0.9,
-            epsilon=0.3,
+            epsilon=1.0,
             training=True
     ):
         """
@@ -32,6 +32,7 @@ class QLearningAgent(BaseAgent):
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
+        self.epsilon_min = 0.1
 
     def process_reward(
             self,
@@ -61,17 +62,20 @@ class QLearningAgent(BaseAgent):
 
         # If returning to previous state, give bad reward
         if not self.second_last_state:
-            self.second_last_state = state
-        elif not self.last_state:
+            self.second_last_state = old_state
             self.last_state = state
         else:
             if state == self.second_last_state and \
                     info['agent_moved'][self.agent_number]:
+                self.second_last_state = old_state
+                self.last_state = state
                 reward = -4
                 return reward
             elif not info['agent_moved'][self.agent_number]:
+                self.second_last_state = old_state
+                self.last_state = state
                 return reward
-            self.second_last_state = self.last_state
+            self.second_last_state = old_state
             self.last_state = state
 
         # If moving to state that agent has already been in, give bad reward
@@ -110,6 +114,10 @@ class QLearningAgent(BaseAgent):
             # Exploitation: Select the action with the highest Q-value
             action = self._get_best_action(state)
         return action
+
+    def decay_epsilon(self, iters):
+        if self.epsilon > self.epsilon_min and self.training:
+            self.epsilon -= (1/iters)
 
     def update_q_values(
             self,

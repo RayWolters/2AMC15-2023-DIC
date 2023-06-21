@@ -20,6 +20,7 @@ from tqdm import trange
 # how to fix module import errors, or ask ChatGPT.
 try:
     from agents import BaseAgent
+    from agents.q_learning_agent import QLearningAgent
     from world.grid import Grid
     from world.gui import EnvironmentGUI
     from world.path_visualizer import visualize_path
@@ -311,7 +312,7 @@ class Environment:
                                  f"{self.grid.cells[new_pos]} at position "
                                  f"{new_pos}.")
 
-    def step(self, actions: list[int]) -> [np.ndarray, float, bool, dict]:
+    def step(self, actions: list[int], agent) -> [np.ndarray, float, bool, dict]:
         """This function makes the agent take a step on the grid.
 
         Actions are provided as a list of integers. The integer values are:
@@ -411,7 +412,7 @@ class Environment:
             self._move_agent(new_pos, i)
 
         # Update the grid with the new agent positions and calculate the reward
-        reward = self.reward_fn(self.grid, self.info)
+        reward = self.reward_fn(self.grid, self.info, agent)
         # print(reward)
         terminal_state = sum(self.agent_done) == self.n_agents
         if terminal_state:
@@ -433,27 +434,27 @@ class Environment:
         coordinates = (int(indices[0][0]), int(indices[1][0]))
         return coordinates
 
-    # @staticmethod
-    # def simple_reward_function(grid: Grid, info: dict) -> float:
-    #     if info["agent_charging"][0]:
-    #         return 15
-    #     elif not info["agent_moved"][0]:
-    #         return -1000.0
-    #     elif info["dirt_cleaned"][0] > 0:
-    #         return 10
-    #     else:
-    #         return -1
 
     @staticmethod
-    def simple_reward_function(grid: Grid, info: dict) -> float:
-        if info["agent_charging"][0]:
-            return 1
-        elif not info["agent_moved"][0]:
-            return -1
-        elif info["dirt_cleaned"][0] > 0:
-            return 0.9
+    def simple_reward_function(grid, info: dict, agent) -> float:
+        if isinstance(agent, QLearningAgent):
+            if info["agent_charging"][0]:
+                return 15
+            elif not info["agent_moved"][0]:
+                return -1000.0
+            elif info["dirt_cleaned"][0] > 0:
+                return 10
+            else:
+                return -1
         else:
-            return -0.05
+            if info["agent_charging"][0]:
+                return 1
+            elif not info["agent_moved"][0]:
+                return -1
+            elif info["dirt_cleaned"][0] > 0:
+                return 0.9
+            else:
+                return -0.05
 
     @staticmethod
     def _default_reward_function(grid: Grid, info: dict) -> float:
@@ -545,7 +546,8 @@ class Environment:
             actions = [agent.take_action(obs, info)
                        for agent in agents]
             # Take a step in the environment
-            obs, reward, terminated, info, _ = env.step(actions)
+            for agent in agents:
+                obs, reward, terminated, info, _ = env.step(actions, agent)
 
             # Process reward has to be called for the agent to know what is
             # going on, q_values are not updated!
@@ -686,7 +688,7 @@ class Environment:
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
-    base_grid_fp = Path("../grid_configs/11x11.grd")
+    base_grid_fp = Path("../grid_configs/16.grd")
     envi = Environment(base_grid_fp, False, 1, target_fps=5)
     observe, inf = envi.get_observation()
 
