@@ -75,55 +75,54 @@ def parse_args():
                    help="Random seed value for the environment.")
     p.add_argument("--out", type=Path, default=Path("results/"),
                    help="Where to save training results.")
+    p.add_argument("--save_agent_model", action="store_true",
+                   help="Enables saving of the agent model.")
 
     return p.parse_args()
 
 
 def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
-         sigma: float, out: Path, random_seed: int):
+         sigma: float, out: Path, random_seed: int, save_agent_model: bool):
     """Main loop of the program."""
 
     for grid in grid_paths:
         # Set up the environment and reset it to its initial state
         start_pos = [(1, 1)]
-
         env = Environment(grid, no_gui, n_agents=1, agent_start_pos=start_pos,
                           reward_fn=Environment.simple_reward_function,
                           sigma=sigma, target_fps=fps, random_seed=random_seed)
         obs, info = env.get_observation()
+        channels_used = 4
 
         # Set up the agents from scratch for every grid
         # Add your agents here
-
-        channels_used = 4
-
         agents = [
-            # QLearningAgent(agent_number=0),
-            DQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=False
-            ),
-            DQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=True
-            ),
-            DuelQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=True
-            ),
-            PERDQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=True
-            ),
-            PERDuelDQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=True
-            ),
+            QLearningAgent(agent_number=0),
+            # DQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=False
+            # ),
+            # DQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # DuelQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # PERDQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # PERDuelDQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
         ]
 
         # Iterate through each agent for `iters` iterations
@@ -174,7 +173,7 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent.reset_parameters()
             agent.training = False
 
-            if not isinstance(agent, QLearningAgent):
+            if not isinstance(agent, QLearningAgent) and save_agent_model:
                 file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
                 torch.save(agent.dqn.state_dict(), f'models/{str(agent)}-{file_name}.pth')
 
@@ -189,4 +188,4 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 if __name__ == '__main__':
     args = parse_args()
     main(args.GRID, args.no_gui, args.iter, args.fps, args.sigma, args.out,
-         args.random_seed)
+         args.random_seed, args.save_agent_model)
