@@ -8,12 +8,22 @@ from agents import BaseAgent
 from collections import deque, namedtuple
 np.set_printoptions(threshold=sys.maxsize)
 
+# Specify device for faster training, mps for mac, cuda for windows
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
 
 
 class PrioritizedReplayBuffer:
     def __init__(self, maxlen, alpha=0.4, beta=0.6, epsilon=0.01):
+        """
+            Prioritized Replay Buffer for storing and sampling experiences based on priorities.
+
+            Args:
+                maxlen (int): Maximum size of the replay buffer.
+                alpha (float): Parameter that determines the prioritization of experiences (default: 0.4).
+                beta (float): Parameter that determines the degree of importance sampling corrections (default: 0.6).
+                epsilon (float): Small value added to priorities to ensure non-zero probabilities (default: 0.01).
+        """
         self.maxlen = maxlen
         self.alpha = alpha
         self.beta = beta
@@ -24,6 +34,16 @@ class PrioritizedReplayBuffer:
         self.size = 0
 
     def add(self, state, action, reward, next_state, done):
+        """
+            Add a new experience to the replay buffer.
+
+            Args:
+                state: Current state.
+                action: Action taken.
+                reward: Reward received.
+                next_state: Next state.
+                done: Indicates if the episode terminated after this experience.
+        """
         experience = Experience(state, action, reward, next_state, done)
         if self.size < self.maxlen:
             self.buffer.append(experience)
@@ -34,6 +54,17 @@ class PrioritizedReplayBuffer:
         self.size = min(self.size + 1, self.maxlen)
 
     def sample_batch(self, batch_size):
+        """
+            Sample a batch of experiences from the replay buffer.
+
+            Args:
+                batch_size (int): Size of the batch to sample.
+
+            Returns:
+                batch (list): List of sampled experiences.
+                weights (ndarray): Importance sampling weights for the sampled experiences.
+                indices (ndarray): Indices of the sampled experiences in the buffer.
+        """
         priorities = self.priorities[:self.size]
         probabilities = priorities ** self.alpha
         probabilities /= probabilities.sum()
@@ -47,15 +78,34 @@ class PrioritizedReplayBuffer:
         return batch, weights, indices
 
     def update_priorities(self, indices, td_errors):
+        """
+            Update the priorities of the experiences in the replay buffer.
+
+            Args:
+                indices (ndarray): Indices of the experiences in the buffer.
+                td_errors (ndarray): TD errors corresponding to the experiences.
+        """
         priorities = td_errors + self.epsilon
         self.priorities[indices] = priorities
 
     def __len__(self):
+        """
+            Return the current size of the replay buffer.
+
+            Returns:
+                size (int): Current size of the replay buffer.
+        """
         return self.size
 
 
 class DQN(nn.Module):
     def __init__(self, input_shape):
+        """
+            Deep Q-Network (DQN) model.
+
+            Args:
+                input_shape (tuple): Shape of the input state (channels, height, width).
+        """
         super(DQN, self).__init__()
 
         # Input shape should be (channels, height, width)
@@ -64,15 +114,15 @@ class DQN(nn.Module):
         # Define the Convolutional layers
         self.conv = nn.Sequential(
             # First Convolutional Layer
-            nn.Conv2d(input_shape[0], 64, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(input_shape[0], 64, kernel_size=5, stride=1, padding=1),
             nn.ReLU(),
 
             # Second Convolutional Layer
-            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING (KERNEL OF 5 WORKS BEST HERE)
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),
             nn.ReLU(),
 
             # Third Convolutional Layer
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU()
         )
 
@@ -81,12 +131,21 @@ class DQN(nn.Module):
 
         # Define the Fully Connected layers
         self.fc = nn.Sequential(
-            nn.Linear(conv_out_size, 128),  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Linear(conv_out_size, 128),  
             nn.ReLU(),
-            nn.Linear(128, 9)  # IMPORTANT FOR TESTING AND TWEAKING
+            nn.Linear(128, 9)  
         )
 
     def _get_conv_out(self, shape):
+        """
+            Helper function to calculate the output size after Convolutional layers.
+
+            Args:
+                shape (tuple): Shape of the input state (channels, height, width).
+
+            Returns:
+                conv_out_size (int): Size of the output after Convolutional layers.
+        """
         # Helper function to calculate the output dimensions after Conv layers
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
@@ -106,8 +165,8 @@ class PERDQLAgent(BaseAgent):
             self,
             agent_number,
             input_dim,
-            alpha=0.001,  # IMPORTANT FOR TESTING AND TWEAKING
-            gamma=0.99,  # IMPORTANT FOR TESTING AND TWEAKING
+            alpha=0.001,  
+            gamma=0.99,  
             epsilon=1.0,
             training=True,
             ddqn=True
@@ -129,14 +188,14 @@ class PERDQLAgent(BaseAgent):
         self.training = training
         self.ddqn = ddqn
 
-        self.epsilon_min = 0.1
+        self.epsilon_min = 0.1  # Specify minimum epsilon
 
         self.already_visited = set()
         self.cleaned_tiles = set()
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
-        self.batch_size = 150  # IMPORTANT FOR TESTING AND TWEAKING
+        self.batch_size = 150  # Specify batch size for sampling
 
         self.input_dim = input_dim
         self.dqn = DQN(self.input_dim).to(device)
@@ -144,7 +203,7 @@ class PERDQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = PrioritizedReplayBuffer(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
+        self.memory = PrioritizedReplayBuffer(maxlen=5000)  # Specify memory size for sampling experiences
 
     def __str__(self):
         if self.ddqn:

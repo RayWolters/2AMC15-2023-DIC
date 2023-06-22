@@ -8,11 +8,18 @@ from agents import BaseAgent
 from collections import deque
 np.set_printoptions(threshold=sys.maxsize)
 
+# Specify device for faster training, mps for mac, cuda for windows
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DQN(nn.Module):
     def __init__(self, input_shape):
+        """
+            Deep Q-Network (DQN) model.
+
+            Args:
+                input_shape (tuple): Shape of the input state (channels, height, width).
+        """
         super(DQN, self).__init__()
 
         # Input shape should be (channels, height, width)
@@ -51,11 +58,29 @@ class DQN(nn.Module):
         )
 
     def _get_conv_out(self, shape):
+        """
+            Helper function to calculate the output size after Convolutional layers.
+
+            Args:
+                shape (tuple): Shape of the input state (channels, height, width).
+
+            Returns:
+                conv_out_size (int): Size of the output after Convolutional layers.
+        """
         # Helper function to calculate the output dimensions after Conv layers
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
     def forward(self, x):
+        """
+            Forward pass through the DQN model.
+
+            Args:
+                x (Tensor): Input state tensor.
+
+            Returns:
+                q_values (Tensor): Q-values for each action.
+        """
         # Forward pass through Convolutional layers
         x = self.conv(x.to(device))
         # Flatten the output
@@ -73,7 +98,7 @@ class DuelQLAgent(BaseAgent):
             self,
             agent_number,
             input_dim,
-            alpha=0.001,  # IMPORTANT FOR TESTING AND TWEAKING
+            alpha=0.001,  # IMPRTANT FOR TESTING AND TWEAKING
             gamma=0.99,  # IMPORTANT FOR TESTING AND TWEAKING
             epsilon=1.0,
             training=True,
@@ -96,14 +121,14 @@ class DuelQLAgent(BaseAgent):
         self.training = training
         self.ddqn = ddqn
 
-        self.epsilon_min = 0.1
+        self.epsilon_min = 0.1  # Specify minimum epsilon
 
         self.already_visited = set()
         self.cleaned_tiles = set()
         self.grid_state = None
         self.last_state = None
         self.second_last_state = None
-        self.batch_size = 150  # IMPORTANT FOR TESTING AND TWEAKING
+        self.batch_size = 150  # Specify batch size for sampling
 
         self.input_dim = input_dim
         self.dqn = DQN(self.input_dim).to(device)
@@ -111,7 +136,7 @@ class DuelQLAgent(BaseAgent):
         self.target_dqn.load_state_dict(self.dqn.state_dict())
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
-        self.memory = deque(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
+        self.memory = deque(maxlen=5000)  # Specify memory size for sampling experiences
 
     def __str__(self):
         if self.ddqn:
