@@ -343,18 +343,14 @@ class Environment:
         self.world_stats["total_steps"] += 1
         is_single_step = False
         
-        # add the random obstacle every 5 seconds
-        # current_time = datetime.now()
-        # elapsed_seconds = (current_time - self.last_obstacle_time).total_seconds()
-        # if elapsed_seconds >= 5:
-        # self.last_obstacle_time = current_time
+        # Add the random obstacle
         if not np.any(self.grid.cells == -1):
             empty_cells = np.argwhere(self.grid.cells == 0)
             if len(empty_cells) > 0:
                 obstacle_cell = random.choice(empty_cells)
                 self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = -1  # Set cell as obstacle
 
-        # Remove obstacle every 10 seconds
+        # Move obstacle every x amount of time
         current_time = datetime.now()
         elapsed_seconds = (current_time - self.last_removal_time).total_seconds()
 
@@ -365,13 +361,12 @@ class Environment:
                 obstacle_cell = random.choice(obstacle_cells)
                 random_x = random.randrange(3) - 1
                 random_y = random.randrange(3) - 1
+                # Check if new position is viable for random obstacle to move on
                 while self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] != 0:
                     random_x = random.randrange(3) - 1
                     random_y = random.randrange(3) - 1
                 self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = 0
                 self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] = -1
-
-
 
         if not self.no_gui:
             start_time = time()
