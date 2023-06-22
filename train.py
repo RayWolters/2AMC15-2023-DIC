@@ -22,9 +22,6 @@ try:
     from world import Environment
 
     # Add your agents here
-    from agents.null_agent import NullAgent
-    from agents.greedy_agent import GreedyAgent
-    from agents.random_agent import RandomAgent
     from agents.q_learning_agent import QLearningAgent
     from agents.dqn_and_ddqn_agent import DQLAgent
     from agents.duel_and_ddqn_agent import DuelQLAgent
@@ -45,10 +42,11 @@ except ModuleNotFoundError:
     from world import Environment
 
     # Add your agents here
-    from agents.null_agent import NullAgent
-    from agents.greedy_agent import GreedyAgent
-    from agents.random_agent import RandomAgent
     from agents.q_learning_agent import QLearningAgent
+    from agents.dqn_and_ddqn_agent import DQLAgent
+    from agents.duel_and_ddqn_agent import DuelQLAgent
+    from agents.dqn_per_agent import PERDQLAgent
+    from agents.ddqn_duel_and_per_agent import PERDuelDQLAgent
 
 def plot(y):
     x = np.arange(len(y))
@@ -100,32 +98,32 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         channels_used = 4
 
         agents = [
-            QLearningAgent(agent_number=0),
+            # QLearningAgent(agent_number=0),
             DQLAgent(
                 agent_number=0,
                 input_dim=(channels_used, len(obs), len(obs[0])),
                 ddqn=False
             ),
-            # DQLAgent(
-            #     agent_number=0,
-            #     input_dim=(channels_used, len(obs), len(obs[0])),
-            #     ddqn=True
-            # ),
-            # DuelQLAgent(
-            #     agent_number=0,
-            #     input_dim=(channels_used, len(obs), len(obs[0])),
-            #     ddqn=True
-            # ),
-            # PERDQLAgent(
-            #     agent_number=0,
-            #     input_dim=(channels_used, len(obs), len(obs[0])),
-            #     ddqn=True
-            # ),
-            # PERDuelDQLAgent(
-            #     agent_number=0,
-            #     input_dim=(channels_used, len(obs), len(obs[0])),
-            #     ddqn=True
-            # ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            DuelQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDuelDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
         ]
 
         # Iterate through each agent for `iters` iterations
@@ -178,15 +176,13 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
             if not isinstance(agent, QLearningAgent):
                 file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
-                torch.save(agent.dqn.state_dict(), f'models/model-{file_name}.pth')
+                torch.save(agent.dqn.state_dict(), f'models/{str(agent)}-{file_name}.pth')
 
             obs, info, world_stats = env.reset()
             print(world_stats)
             print(agent)
             Environment.evaluate_agent(grid, [agent], 1000, out, training_time,
                                        sigma, agent_start_pos=start_pos)
-            # Environment.evaluate_plot(grid, [agent], 10000, out,
-            #                           sigma, agent_start_pos=None)
 
 
 

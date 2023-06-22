@@ -437,6 +437,16 @@ class Environment:
 
     @staticmethod
     def simple_reward_function(grid, info: dict, agent) -> float:
+        """This function returns the reward based on the action of an agent,
+        and checks if the agent is a normal Q Learning model, because that
+        uses a different reward setting.
+
+        Args:
+            info: To check the reward
+            agent: To check the type of the agent
+
+        Returns: Reward value
+        """
         if isinstance(agent, QLearningAgent):
             if info["agent_charging"][0]:
                 return 15
@@ -688,19 +698,18 @@ class Environment:
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
-    base_grid_fp = Path("../grid_configs/16.grd")
+    base_grid_fp = Path("../grid_configs/final14.grd")
     envi = Environment(base_grid_fp, False, 1, target_fps=5)
     observe, inf = envi.get_observation()
 
     # Load the random agent
-    from agents.random_agent import RandomAgent
     from agents.q_learning_agent import QLearningAgent
     test_agent = QLearningAgent(agent_number=0)
 
     # Take 1000 steps with the GUI
     for t in trange(1000):
         act = [test_agent.take_action(observe, inf)]
-        observe, r, term_state, inf, _ = envi.step(act)
+        observe, r, term_state, inf, _ = envi.step(act, test_agent)
         if term_state:
             break
 
@@ -709,7 +718,7 @@ if __name__ == '__main__':
     print(stats)
     for t in trange(100000):
         act = [test_agent.take_action(observe, inf)]
-        observe, r, term_state, inf, _ = envi.step(act)
+        observe, r, term_state, inf, _ = envi.step(act, test_agent)
         if term_state:
             break
 
