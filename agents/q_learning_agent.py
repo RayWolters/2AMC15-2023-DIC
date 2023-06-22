@@ -116,6 +116,11 @@ class QLearningAgent(BaseAgent):
         return action
 
     def decay_epsilon(self, iters):
+        """
+            Decay the epsilon based on the amount of iterations
+            Args:
+                iters: Amount of iterations to base decay on.
+        """
         if self.epsilon > self.epsilon_min and self.training:
             self.epsilon -= (1/iters)
 
