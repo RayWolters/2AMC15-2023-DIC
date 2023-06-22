@@ -214,4 +214,6 @@ class QLearningAgent(BaseAgent):
         grid = observation.copy()
         dirt_mask = (grid == 3)
         grid[dirt_mask] = 0
+        random_obstacle_mask = (grid == -1)
+        grid[random_obstacle_mask] = 0
         return grid

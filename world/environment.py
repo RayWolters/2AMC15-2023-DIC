@@ -51,7 +51,8 @@ class Environment:
                  agent_start_pos: list[tuple[int, int]] = None,
                  reward_fn: callable = None,
                  target_fps: int = 30,
-                 random_seed: int | float | str | bytes | bytearray | None = 0):
+                 random_seed: int | float | str | bytes | bytearray | None = 0,
+                 random_obstacle: bool = False):
         """Creates the grid environment for the robot vacuum.
 
         Creates a Grid environment from the provided grid file. The number of
@@ -83,6 +84,7 @@ class Environment:
                 happening. Set to 0 or less to unlock FPS.
             random_seed: The random seed to use for this environment. If None
                 is provided, then the seed will be set to 0.
+            random_obstacle: Whether a random obstacle spawns in the grid.
         """
         random.seed(random_seed)
         self.sigma = sigma
@@ -117,6 +119,8 @@ class Environment:
             self.reward_fn = reward_fn
         self.info = self._reset_info()
         self.world_stats = self._reset_world_stats()
+
+        self.random_obstacle = random_obstacle
 
         self.environment_ready = False
         self.reset()
@@ -342,33 +346,34 @@ class Environment:
         """
         self.world_stats["total_steps"] += 1
         is_single_step = False
-        
-        # Add the random obstacle
-        if not np.any(self.grid.cells == -1):
-            empty_cells = np.argwhere(self.grid.cells == 0)
-            if len(empty_cells) > 0:
-                obstacle_cell = random.choice(empty_cells)
-                self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = -1  # Set cell as obstacle
 
-        # Move obstacle every x amount of time
-        current_time = datetime.now()
-        elapsed_seconds = (current_time - self.last_removal_time).total_seconds()
-        moving_speed = 0.75
+        if self.random_obstacle:
+            # Add the random obstacle
+            if not np.any(self.grid.cells == -1):
+                empty_cells = np.argwhere(self.grid.cells == 0)
+                if len(empty_cells) > 0:
+                    obstacle_cell = random.choice(empty_cells)
+                    self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = -1  # Set cell as obstacle
 
-        if elapsed_seconds >= moving_speed:
-            self.last_removal_time = current_time
-            obstacle_cells = np.argwhere(self.grid.cells == -1)
-            if len(obstacle_cells) > 0:
-                obstacle_cell = random.choice(obstacle_cells)
-                random_x = random.randrange(3) - 1
-                random_y = random.randrange(3) - 1
+            # Move obstacle every x amount of time
+            current_time = datetime.now()
+            elapsed_seconds = (current_time - self.last_removal_time).total_seconds()
+            moving_speed = 0.75
 
-                # Check if new position is viable for random obstacle to move on
-                while self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] != 0:
+            if elapsed_seconds >= moving_speed:
+                self.last_removal_time = current_time
+                obstacle_cells = np.argwhere(self.grid.cells == -1)
+                if len(obstacle_cells) > 0:
+                    obstacle_cell = random.choice(obstacle_cells)
                     random_x = random.randrange(3) - 1
                     random_y = random.randrange(3) - 1
-                self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = 0
-                self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] = -1
+
+                    # Check if new position is viable for random obstacle to move on
+                    while self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] != 0:
+                        random_x = random.randrange(3) - 1
+                        random_y = random.randrange(3) - 1
+                    self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = 0
+                    self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] = -1
 
         if not self.no_gui:
             start_time = time()
