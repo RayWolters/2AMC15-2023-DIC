@@ -22,6 +22,7 @@ class Grid:
         - 2: Obstacle
         - 3: Dirt
         - 4: Charger
+        - -1: Random obstacle
 
         Args:
             n_cols: Number of columns the grid should have.
@@ -51,6 +52,8 @@ class Grid:
         y0 = max(y0, from_edge)
         y1 = min(y1 + 1, self.n_rows - from_edge)
         self.cells[x0:x1, y0:y1] = 2
+    def place_random_obstacle(self , x,y):
+        self.cells[x][y] = -1
 
     def place_single_obstacle(self, x, y):
         """Places a single obstacle marker on the grid."""

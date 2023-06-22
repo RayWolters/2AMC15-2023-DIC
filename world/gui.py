@@ -17,6 +17,7 @@ class EnvironmentGUI:
         (57, 57, 57),     # Obstacle cell
         (255, 119, 0),    # Dirt cell
         (34, 139, 34),    # Charger cell
+        (0 ,0, 128)       # random obstacle
     ]
     INFO_NAME_MAP = [
         ("total_steps", "Total steps:"),

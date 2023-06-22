@@ -106,6 +106,9 @@ class Environment:
         self.agent_start_pos = agent_start_pos   # Where agents initially start
         self.agent_done = [False] * n_agents
 
+        self.last_obstacle_time = datetime.now()
+        self.last_removal_time = datetime.now()
+
         # Set up reward function
         if reward_fn is None:
             warn("Simple reward function is used.")
@@ -286,7 +289,7 @@ class Environment:
                 self.agent_pos[agent_id] = new_pos
                 self.info["agent_moved"][agent_id] = True
                 self.world_stats["total_agent_moves"] += 1
-            case 1 | 2:  # Moved to a wall or obstacle
+            case 1 | 2 | -1:  # Moved to a wall or obstacle
                 self.world_stats["total_failed_moves"] += 1
                 pass
             case 3:  # Moved to a dirt tile
@@ -339,6 +342,37 @@ class Environment:
         """
         self.world_stats["total_steps"] += 1
         is_single_step = False
+        
+        # add the random obstacle every 5 seconds
+        # current_time = datetime.now()
+        # elapsed_seconds = (current_time - self.last_obstacle_time).total_seconds()
+        # if elapsed_seconds >= 5:
+        # self.last_obstacle_time = current_time
+        if not np.any(self.grid.cells == -1):
+            empty_cells = np.argwhere(self.grid.cells == 0)
+            if len(empty_cells) > 0:
+                obstacle_cell = random.choice(empty_cells)
+                self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = -1  # Set cell as obstacle
+
+        # Remove obstacle every 10 seconds
+        current_time = datetime.now()
+        elapsed_seconds = (current_time - self.last_removal_time).total_seconds()
+
+        if elapsed_seconds >= 0.75:
+            self.last_removal_time = current_time
+            obstacle_cells = np.argwhere(self.grid.cells == -1)
+            if len(obstacle_cells) > 0:
+                obstacle_cell = random.choice(obstacle_cells)
+                random_x = random.randrange(3) - 1
+                random_y = random.randrange(3) - 1
+                while self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] != 0:
+                    random_x = random.randrange(3) - 1
+                    random_y = random.randrange(3) - 1
+                self.grid.cells[obstacle_cell[0], obstacle_cell[1]] = 0
+                self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] = -1
+
+
+
         if not self.no_gui:
             start_time = time()
             while self.gui.paused:
@@ -698,7 +732,7 @@ class Environment:
 
 if __name__ == '__main__':
     # This is sample code to test a single grid.
-    base_grid_fp = Path("../grid_configs/final14.grd")
+    base_grid_fp = Path("../grid_configs/16.grd")
     envi = Environment(base_grid_fp, False, 1, target_fps=5)
     observe, inf = envi.get_observation()
 
