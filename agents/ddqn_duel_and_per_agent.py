@@ -8,7 +8,7 @@ from agents import BaseAgent
 from collections import deque, namedtuple
 np.set_printoptions(threshold=sys.maxsize)
 
-device = torch.device("mps")
+device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 Experience = namedtuple('Experience', ('state', 'action', 'reward', 'next_state', 'done'))
 
 
@@ -129,7 +129,8 @@ class PERDuelDQLAgent(BaseAgent):
                 alpha: Learning rate (default: 0.1).
                 gamma: Discount factor (default: 0.9).
                 epsilon: Exploration rate (default: 0).
-                training: Whether agent is in training mode (default: True)
+                training: Whether agent is in training mode (default: True).
+                ddqn: Whether to use Double DQN (Default: True).
         """
         super().__init__(agent_number)
         self.alpha = alpha
@@ -154,6 +155,12 @@ class PERDuelDQLAgent(BaseAgent):
         self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.alpha)
         self.loss_fn = nn.MSELoss()
         self.memory = PrioritizedReplayBuffer(maxlen=5000)  # IMPORTANT FOR TESTING AND TWEAKING
+
+    def __str__(self):
+        if self.ddqn:
+            return 'DuelingPERModelWithDouble'
+        else:
+            return 'DuelingPERModel'
 
     def process_reward(
             self,
@@ -186,7 +193,7 @@ class PERDuelDQLAgent(BaseAgent):
             reward = -1
             return reward
 
-        # If returning to previous state, give bad reward
+        # If returning to previous state, give worse reward
         if not self.second_last_state:
             self.second_last_state = tuple(old_state.flatten())
             self.last_state = flat_state
@@ -204,7 +211,7 @@ class PERDuelDQLAgent(BaseAgent):
             self.second_last_state = tuple(old_state.flatten())
             self.last_state = flat_state
 
-        # If moving to state that agent has already been in, give bad reward
+        # If moving to state that agent has already been in, give worse reward
         if flat_state in self.already_visited and \
                 info['agent_moved'][self.agent_number]:
             reward = -0.5
@@ -219,6 +226,16 @@ class PERDuelDQLAgent(BaseAgent):
         return reward
 
     def take_action(self, observation, info):
+        """
+            Return the action based on q value computed by DQN or randomly if
+            epsilon
+            Args:
+                observation: Observation to compute action on.
+                info: Current info to compute action on.
+
+            Returns:
+                action: integer corresponding to action
+        """
         state = self.get_state_from_info(observation, info)
         self.already_visited.add(tuple(state.flatten()))
 
@@ -236,10 +253,18 @@ class PERDuelDQLAgent(BaseAgent):
         return action
 
     def decay_epsilon(self, iters):
+        """
+            Decay the epsilon based on the amount of iterations
+            Args:
+                iters: Amount of iterations to base decay on.
+        """
         if self.epsilon > self.epsilon_min and self.training:
             self.epsilon -= (1/iters)
 
     def update_q_values(self):
+        """
+            Update the DQN by sampling batches from the memory buffer.
+        """
         if len(self.memory) < self.batch_size:
             # Not enough samples in memory to create a batch
             return
@@ -296,18 +321,19 @@ class PERDuelDQLAgent(BaseAgent):
     def get_state_from_info(self, observation: np.ndarray,
                             info: dict) -> np.ndarray:
         """
-        Get state from given observation and info for use with CNN.
+            Get state from given observation and info for use with CNN.
 
-        Args:
-            observation: Observation to compute state from.
-            info: Info to compute position from.
+            Args:
+                observation: Observation to compute state from.
+                info: Info to compute position from.
         """
-
         # Extract agent position from info
         agent_pos = info['agent_pos'][self.agent_number]
 
         # Initialize grid state if it is None
         if self.grid_state is None:
+            # Get a dirtless layout of the grid so the agent does not know
+            # locations of dirt if has not cleaned the dirt yet
             self.grid_state = self.get_dirtless_grid(observation)
 
         # Make a copy of the grid to avoid modifying the original
@@ -318,13 +344,17 @@ class PERDuelDQLAgent(BaseAgent):
         walls_channel = np.where(grid_state == 1, 1, 0) + np.where(
             grid_state == 2, 1, 0)
 
-        # empty_channel = np.where(grid_state == 0, 1, 0)
+        # Channel 2: Dirt (1 for dirt, 0 otherwise)
         dirt_channel = np.where(grid_state == 3, 1, 0)
+
+        # Channel 3: Agent position (1 for charger, 0 otherwise)
         charge_channel = np.where(grid_state == 4, 1, 0)
 
+        # Channel 4: Agent position (1 for Agent position, 0 otherwise)
         agent_pos_channel = np.zeros_like(grid_state)
         agent_pos_channel[agent_pos[0], agent_pos[1]] = 1
 
+        # Stack the channel to define the final state
         final_state = np.stack(
             [walls_channel, dirt_channel, charge_channel,
              agent_pos_channel], axis=0)
@@ -356,6 +386,17 @@ class PERDuelDQLAgent(BaseAgent):
         self.grid_state = None
 
     def remember(self, state, action, reward, next_state, done):
+        """
+            Remember the old state action new state combination with corresponding
+            rewards. Remember it by defining an experience for the PER model.
+
+            Args:
+                state: State before the action is performed.
+                action: Action to be performed.
+                reward: Reward corresponding to the action.
+                next_state: New state as a result of action performed on old state.
+                done: Boolean if the agent is at charger.
+        """
         if done:
             experience = Experience(state, action, reward, next_state,
                                     1)
@@ -370,4 +411,7 @@ class PERDuelDQLAgent(BaseAgent):
                             experience.next_state, experience.done)
 
     def synchronize_target_network(self):
+        """
+            Update the target network using the main DQN network.
+        """
         self.target_dqn.load_state_dict(self.dqn.state_dict())
