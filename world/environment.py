@@ -361,6 +361,7 @@ class Environment:
                 obstacle_cell = random.choice(obstacle_cells)
                 random_x = random.randrange(3) - 1
                 random_y = random.randrange(3) - 1
+
                 # Check if new position is viable for random obstacle to move on
                 while self.grid.cells[obstacle_cell[0]+random_x, obstacle_cell[1]+random_y] != 0:
                     random_x = random.randrange(3) - 1
