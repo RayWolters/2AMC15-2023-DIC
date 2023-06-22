@@ -353,8 +353,9 @@ class Environment:
         # Move obstacle every x amount of time
         current_time = datetime.now()
         elapsed_seconds = (current_time - self.last_removal_time).total_seconds()
+        moving_speed = 0.75
 
-        if elapsed_seconds >= 0.75:
+        if elapsed_seconds >= moving_speed:
             self.last_removal_time = current_time
             obstacle_cells = np.argwhere(self.grid.cells == -1)
             if len(obstacle_cells) > 0:
