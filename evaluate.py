@@ -105,11 +105,11 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
         # Add your agents here
         agents = [
             # QLearningAgent(agent_number=0),
-            # DQLAgent(
-            #     agent_number=0,
-            #     input_dim=(channels_used, len(obs), len(obs[0])),
-            #     ddqn=False
-            # ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=False
+            ),
             DQLAgent(
                 agent_number=0,
                 input_dim=(channels_used, len(obs), len(obs[0])),
@@ -132,7 +132,8 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             # ),
         ]
 
-        model_paths = ['models/BaseModelWithDouble-2023-06-23__15-15-48.pth']
+        model_paths = ['models/BaseModel-small-2023-06-23__15-09-08.pth',
+                       'models/BaseModelWithDouble-small-2023-06-23__15-15-48.pth']
         for grid in grid_paths:
             # Iterate through each agent for `iters` iterations
             for agent, model in zip(agents, model_paths):

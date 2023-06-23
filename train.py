@@ -100,12 +100,12 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
 
         # Choose which agents you want to run on for training
         agents = [
-            # QLearningAgent(agent_number=0),
-            DQLAgent(
-                agent_number=0,
-                input_dim=(channels_used, len(obs), len(obs[0])),
-                ddqn=False
-            ),
+            QLearningAgent(agent_number=0),
+            # DQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=False
+            # ),
             # DQLAgent(
             #     agent_number=0,
             #     input_dim=(channels_used, len(obs), len(obs[0])),
@@ -183,14 +183,14 @@ def main(grid_paths: list[Path], no_gui: bool, iters: int, fps: int,
             agent.reset_parameters()
             agent.training = False
 
-            # Put agent in evaluation mode
-            agent.dqn.eval()
-
             # If --save_agent_model flag is given to command, save the dqn
             # model of the agent
             if not isinstance(agent, QLearningAgent) and save_agent_model:
+                # Put agent in evaluation mode
+                agent.dqn.eval()
                 file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
-                torch.save(agent.dqn.state_dict(), f'models/{str(agent)}-{file_name}.pth')
+                grid_name = str(grid).replace('grid_configs/', '').replace('.grd', '')
+                torch.save(agent.dqn.state_dict(), f'models/{str(agent)}-{grid_name}-{file_name}.pth')
 
             obs, info, world_stats = env.reset()
             print(world_stats)
