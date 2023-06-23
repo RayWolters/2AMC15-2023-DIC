@@ -485,11 +485,11 @@ class Environment:
         """
         if isinstance(agent, QLearningAgent):
             if info["agent_charging"][0]:
-                return 15
+                return 25
             elif not info["agent_moved"][0]:
-                return -1000.0
+                return -10.0
             elif info["dirt_cleaned"][0] > 0:
-                return 10
+                return 20
             else:
                 return -1
         else:
