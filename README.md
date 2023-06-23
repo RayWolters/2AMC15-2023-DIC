@@ -1,152 +1,155 @@
-# 2AMC15-2023-DIC
+# 2AMC15 Group 13
 
-Welcome to 2AMC15 Data Intelligence Challenge!.
-This is the repository containing the challenge environment code.
+This is our final code for the course 2AMC15.
 
-## Quickstart
-
-1. Create an agent which inherits from the `BaseAgent` class
-2. Add the agents you want to test to `train.py`
-   - There are 2 places to add you agent. Look for the comment `# Add your agent here` for where to add your agent.
-3. Run `$ python train.py grid_configs/rooms-1.grd --out results/` to start training!
-
-`train.py` is just an example training script. 
-Feel free to modify it as necessary.
-In our basic example, we use command line arguments to select options for it.
-This may not be convenient for you and you can choose to replace this training script with whatever you want.
-By default, its usage is:
+Please first install the requirements using:
 
 ```bash
-usage: train.py [-h] [--no_gui] [--sigma SIGMA] [--fps FPS] [--iter ITER]
-                [--random_seed RANDOM_SEED] [--out OUT]
-                GRID [GRID ...]
-
-DIC Reinforcement Learning Trainer.
-
-positional arguments:
-  GRID                  Paths to the grid file to use. There can be more than
-                        one.
-
-options:
-  -h, --help            show this help message and exit
-  --no_gui              Disables rendering to train faster
-  --sigma SIGMA         Sigma value for the stochasticity of the environment.
-  --fps FPS             Frames per second to render at. Only used if no_gui is
-                        not set.
-  --iter ITER           Number of iterations to go through.
-  --random_seed RANDOM_SEED
-                        Random seed value for the environment.
-  --out OUT             Where to save training results.
+pip install -r requirements.txt
 ```
-## Code guide
 
-The code is made up of 3 modules: 
+## Agents
 
-1. `agent`
-2. `level_editor`
-3. `world`
+Within the `agents` directory you can find all the agents. This agents can be called within train.py or evaluate.py with multiple parameters (alpha, epsilon, gamma, ddqn). All parameters are self-explanatory except for ddqn, this parameters decides whether to use Double DQN to compute the target q-values.
 
-### The `agent` module
+Within the files of the agents themselves one can also choose to change parameters, such as hidden dimensions and kernel sizes for the CNNs; batch size and memory size for the experience replay buffer.
 
-The `agent` module contains the `BaseAgent` class as well as some benchmark agents to test against.
+## Training
 
-The `BaseAgent` is an abstract class and all RL agents for DIC must inherit from/implement it.
-If you know/understand class inheritence, skip the following section
+Within `train.py` there is a list called `agents` where you are able to specify which agents you want to run. There are already some agents present for you to comment in/out.
+Next to the default arguments when calling train.py, two new arguments were added:
 
-#### `BaseAgent` as an abstract class
-Think of this like how all models in PyTorch start like 
+```bash
+--save_agent_model  Whether to save the DQN network once done training  
+                        
+--cat               Whether to deploy a randomly moving obstacle on the grid
+```
+
+The training can be ran using one of the following commands (these ones were used for the results in the report):
+
+```bash
+python train.py grid_configs/small.grd --out results/ --iter x --no_gui --save_agent_model
+python train.py grid_configs/medium.grd --out results/ --iter x --no_gui --save_agent_model
+python train.py grid_configs/house.grd --out results/ --iter x --no_gui --save_agent_model
+```
+
+Here `x` can be chosen (25000 and 40000) were used for the report for the DQN agents, (500000) can be used for the normal Q-Learning agent. You can also choose to leave out `--save_agent_model` and/or add `--cat`.
+
+There are also 2 `.bat` files included to run experiments. These files can be ran using the `bash` command in the terminal: `bash normal_q_learning.bat`. For the `normal_q_learning.bat` all agents in the `agents` list within `train.py` should be commented out except for `QLearningAgent` like this:
 
 ```python
-class NewModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-    ...
+agents = [
+            QLearningAgent(agent_number=0),
+            # DQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=False
+            # ),
+            # DQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # DuelQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # PERDQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+            # PERDuelDQLAgent(
+            #     agent_number=0,
+            #     input_dim=(channels_used, len(obs), len(obs[0])),
+            #     ddqn=True
+            # ),
+        ]
 ```
 
-In this case, `NewModel` inherits from `nn.Module`, which gives it the ability to do back propagation, store parameters, etc. without you having to manually code that every time.
-It also ensures that every class that inherits from `nn.Module` contains _at least_ the `forward()` method, which allows a forward pass to actually happen.
+For the other file, `dqn_agents_training.bat` it should be the other way around:
 
-In the case of your RL agent, inheriting from `BaseAgent` guarantees that your agent implements `process_reward()` and `take_action()`.
-This ensures that no matter what RL agent you make and however you code it, the environment and training code can always interact with it in the same way.
-Check out the benchmark agents to see examples.
+```python
+agents = [
+            # QLearningAgent(agent_number=0),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=False
+            ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            DuelQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDuelDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+        ]
+```
 
-### The `level_editor` module
+Keep in mind that the training speed of the DQN models is HEAVILY dependent on the GPU. So the times that were managed in the report may not be case for you.
 
-The `level_editor` module contains a file called `app.py`.
-Run this file to make new levels.
+## Evaluation of saved models
+
+If models are saved, their path can be added to `model_paths` in `evaluate.py`. This file can then be run to see the evaluation of that model in the GUI. Here are some example commands:
 
 ```bash
-$ python app.py
+python evaluate.py grid_configs/small.grd --cat
+python evaluate.py grid_configs/medium.grd --cat
+python evaluate.py grid_configs/house.grd --cat
 ```
 
-This will start up a web server where you can edit levels.
-To view the level editor itself, go to `127.0.0.1:5000`.
-All levels will be saved to the `grid_configs/` directory.
+If evaluating more models at once, be sure that the index of the path in the `model_paths` list corresponds to the index of the agent in the `agents` list. The model names reflect to which kind of agents they belong, example:
 
-Where the grids are saved can be changed in the file `level_editor/__init__.py`, but this is not recommended.
-
-We also provide a `grid_generator.py` file to generate random grids, found in `level_editor` directory.
-Usage is:
-
-```bash
-$ cd level_editor
-$ python grid_generator.py 
-
-usage: grid_generator.py [-h] N_GRIDS N_ROOMS FILE_PREFIX
-
-Randomly generate grids.
-
-positional arguments:
-  N_GRIDS      Number of grids to generate.
-  N_ROOMS      Number of rooms to generate in each grid.
-  FILE_PREFIX  Prefix to give to the generated file name.
-
-options:
-  -h, --help   show this help message and exit
+```python
+model_paths = ['models/BaseModel-small-2023-06-23__15-09-08.pth', 'models/BaseModelWithDouble-small-2023-06-23__15-15-48.pth']
 ```
 
-### The `world` module
+belong to
 
-The world module contains:
-1. `environment.py`
-2. `grid.py`
-3. `gui.py`
+```python
+agents = [
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=False
+            ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            )
+        ]
+```
 
-#### The Environment
+respectively. As can be seen in the path names of the model, these models are trained on the `small.grd` grid, so they should also be evaluated on these grids. So a model that is trained on a different grid should be evaluated seperately:
 
-The environment is very important because it contains everything we hold dear, including ourselves [^1].
-It is also the name of the class which our RL agent will act within.
+```python
+model_paths = ['models/DuelingPERModelWithDouble-medium-2023-06-23__16-01-35.pth']
+```
 
-The main interaction with `Environment` is through the methods:
+belong to
 
-- `Environment()` to initialize the environment
-- `get_observation()` to get an environment observation without taking a step or resetting the environment.
-- `reset()` to reset the environment
-- `step()` to actually take a time step with the environment.
-
-Explanations for each of these methods and how to use them can be found in the examples in the `environment.py` files and in the documentation in the code itself.
-
-[^1]: In case you missed it, this sentence is a joke. Please do not write all your code in the `Environment` class.
-
-#### The Grid
-
-The `Grid` class is the world on which the agents actually move.
-It is essentially a fancy Numpy array with different methods to make things easier for us to work with.
-
-#### The GUI
-
-The Graphical User Interface provides a way for you to actually see what the RL agent is doing.
-While performant and written using PyGame, it is still about 1300x slower than not running a GUI.
-Because of this, we recommend using it only while testing/debugging and not while training.
-
-## Requirements
-
-- python ~= 3.10
-- numpy >= 1.24
-- tqdm ~= 4
-- pygame ~= 2.3
-- flask ~= 2.2
-- flask-socketio ~= 5.3
-- pillow ~= 9.4
-- colorcet ~=3.0
-
+```python
+agents = [
+            PERDuelDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            )
+        ]
+```
