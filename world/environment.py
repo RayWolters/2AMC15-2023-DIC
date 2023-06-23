@@ -86,7 +86,7 @@ class Environment:
                 is provided, then the seed will be set to 0.
             random_obstacle: Whether a random obstacle spawns in the grid.
         """
-        random.seed(random_seed)
+        # random.seed(random_seed)
         self.sigma = sigma
         if not grid_fp.exists():
             raise FileNotFoundError(f"Grid {grid_fp} does not exist.")
@@ -529,11 +529,14 @@ class Environment:
                        agents: list[BaseAgent],
                        max_steps: int,
                        out_dir: Path,
-                       training_time: float,
+                       training_time: float = 0.0,
                        sigma: float = 0.,
                        agent_start_pos: list[tuple[int, int]] = None,
                        random_seed: int | float | str | bytes | bytearray = 0,
-                       show_images: bool = False):
+                       show_images: bool = False,
+                       no_gui: bool = True,
+                       cat: bool = False,
+                       eval: bool = False):
         """Evaluates a single trained agent's performance.
 
         What this does is it creates a completely new environment from the
@@ -565,18 +568,22 @@ class Environment:
                 is provided, then the seed will be set to 0.
             show_images: Whether to show the images at the end of the
                 evaluation. If False, only saves the images.
+            no_gui: Whether evaluation is in gui.
+            cat: Whether cat is enabled in evaluation.
+            eval: Whether only evaluation is called.
         """
         if not out_dir.exists():
             warn("Evaluation output directory does not exist. Creating the "
                  "directory.")
             out_dir.mkdir(parents=True, exist_ok=True)
         env = Environment(grid_fp=grid_fp,
-                          no_gui=True,
+                          no_gui=no_gui,
                           n_agents=len(agents),
                           sigma=sigma,
                           agent_start_pos=agent_start_pos,
                           target_fps=-1,
-                          random_seed=random_seed)
+                          random_seed=random_seed,
+                          random_obstacle=cat)
         obs, info = env.get_observation()
 
         initial_grid = np.copy(obs)
@@ -587,6 +594,8 @@ class Environment:
         for _ in trange(max_steps,
                         desc=f"Evaluating agent"
                              f"{'s' if len(agents) > 1 else ''}"):
+            if eval:
+                sleep(0.1)
             old_states = [agent.get_state_from_info(obs, info) for agent in agents]
             # Get the agent actions
             actions = [agent.take_action(obs, info)
@@ -617,23 +626,25 @@ class Environment:
         path_images = visualize_path(initial_grid, agent_paths)
 
         print("Evaluation complete. Results:")
-        # File name is the current date and time
-        file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
-        out_fp = out_dir / f"{file_name}.txt"
-        with open(out_fp, "w") as f:
-            f.write(f"Total training time: {training_time}")
-            print(f"Total training time: {training_time}")
-            for key, value in world_stats.items():
-                f.write(f"{key}: {value}\n")
-                print(f"{key}: {value}")
 
-        # Save the images
-        for i, img in enumerate(path_images):
-            img_name = f"{file_name}_agent-{i}"
-            out_fp = out_dir / f"{img_name}.png"
-            img.save(out_fp)
-            if show_images:
-                img.show(f"Agent {i} Path Frequency")
+        if not eval:
+            # File name is the current date and time
+            file_name = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
+            out_fp = out_dir / f"{file_name}.txt"
+            with open(out_fp, "w") as f:
+                f.write(f"Total training time: {training_time}")
+                print(f"Total training time: {training_time}")
+                for key, value in world_stats.items():
+                    f.write(f"{key}: {value}\n")
+                    print(f"{key}: {value}")
+
+            # Save the images
+            for i, img in enumerate(path_images):
+                img_name = f"{file_name}_agent-{i}"
+                out_fp = out_dir / f"{img_name}.png"
+                img.save(out_fp)
+                if show_images:
+                    img.show(f"Agent {i} Path Frequency")
 
     @staticmethod
     def evaluate_plot(grid_fp: Path,
@@ -721,6 +732,8 @@ class Environment:
                 steps.append(world_stats['total_agent_moves'])
                 total_steps.append(world_stats['total_steps'])
                 k = 0
+
+            sleep(5)
 
         print('total steps: ', sum(total_steps) / len(total_steps))
         print('steps: ', sum(steps) / len(steps))
