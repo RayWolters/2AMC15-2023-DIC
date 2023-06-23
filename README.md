@@ -10,7 +10,7 @@ pip install -r requirements.txt
 
 ## Agents
 
-Within the `agents` directory you can find all the agents. This agents can be called within train.py or evaluate.py with multiple parameters (alpha, epsilon, gamma, ddqn). All parameters are self-explanatory except for ddqn, this parameters decides whether to use Double DQN to compute the target q-values.
+Within the `agents` directory you can find all the agents. These agents can be called within train.py or evaluate.py with multiple parameters (alpha, epsilon, gamma, ddqn). All parameters are self-explanatory except for ddqn, this parameters decides whether to use Double DQN to compute the target q-values.
 
 Within the files of the agents themselves one can also choose to change parameters, such as hidden dimensions and kernel sizes for the CNNs; batch size and memory size for the experience replay buffer.
 
@@ -25,7 +25,7 @@ Next to the default arguments when calling train.py, two new arguments were adde
 --cat               Whether to deploy a randomly moving obstacle on the grid
 ```
 
-The training can be ran using one of the following commands (these ones were used for the results in the report):
+The training can be run using one of the following commands (these ones were used for the results in the report):
 
 ```bash
 python train.py grid_configs/small.grd --out results/ --iter x --no_gui --save_agent_model
