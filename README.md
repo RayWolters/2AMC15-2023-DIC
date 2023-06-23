@@ -103,6 +103,51 @@ agents = [
 
 Keep in mind that the training speed of the DQN models is HEAVILY dependent on the GPU. So the times that were managed in the report may not be case for you.
 
+## Reproducing the score plot seen in the report
+
+To reproduce the results from figure 4 in the report, uncomment all agents in the train.py file, and simply run:
+
+```bash
+python results.py
+```
+
+Please note that in the report we did not include the regular Q-learning agent in this plot. We advise to comment this agent out for getting the most accurate results:
+
+```python
+agents = [
+            # QLearningAgent(agent_number=0),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=False
+            ),
+            DQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            DuelQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+            PERDuelDQLAgent(
+                agent_number=0,
+                input_dim=(channels_used, len(obs), len(obs[0])),
+                ddqn=True
+            ),
+        ]
+```
+
+
+This will automatically create the plot of the 14x14 grid. It does not automatically show both plots due to time issues.  
+If you wish to see the other grid (16x16), please change the number in `run_experiments(14)` to `run_experiments(16)` on line 221 and 227 in `results.py`.
+
 ## Evaluation of saved models
 
 If models are saved, their path can be added to `model_paths` in `evaluate.py`. This file can then be run to see the evaluation of that model in the GUI. Here are some example commands:
