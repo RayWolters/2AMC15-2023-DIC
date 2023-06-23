@@ -86,7 +86,7 @@ class QLearningAgent(BaseAgent):
 
         # If dirt cleaned with move, update grid_state and add tile to
         # cleaned tiles
-        if reward == 10:
+        if reward == 20:
             self.cleaned_tiles.add(agent_pos)
             self.grid_state[agent_pos[0]][agent_pos[1]] = 3
 
