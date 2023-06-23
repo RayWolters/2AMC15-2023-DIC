@@ -98,7 +98,7 @@ def get_result_files():
                 result_files.append(file)
 
     # Get the last 30 files
-    result_files = result_files[-12:]
+    result_files = result_files[-30:]
 
     return result_files
 
